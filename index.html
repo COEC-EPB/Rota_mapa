@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <title>Mapa de Despacho por Equipe</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" crossorigin="" />
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+        }
+
+        #topo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 8px 12px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #topo h2 {
+            margin: 0;
+            font-size: 18px;
+            color: #222;
+        }
+
+        #controls {
+            padding: 8px 12px;
+            display: none;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+        }
+
+        select, button, input[type="text"], input[type="file"] {
+            font-size: 15px;
+            padding: 7px 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        button {
+            cursor: pointer;
+            background: #0097CE;
+            color: white;
+            border: none;
+        }
+
+        button:hover {
+            background: #007fb0;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        #select-equipe {
+            min-width: 280px;
+            max-width: 320px;
+        }
+
+        #map {
+            height: calc(100vh - 118px);
+            width: 100%;
+        }
+
+        #legend {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 12px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.25);
+            font-size: 14px;
+            z-index: 1000;
+            min-width: 260px;
+            display: none;
+        }
+
+        .numero-balao div {
+            background-repeat: no-repeat;
+            background-position: center bottom;
+        }
+
+        .info-box {
+            position: fixed;
+            top: 130px;
+            right: 20px;
+            background: white;
+            padding: 12px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.25);
+            font-size: 14px;
+            z-index: 1000;
+            max-height: 260px;
+            overflow-y: auto;
+            min-width: 260px;
+            display: none;
+        }
+
+        .info-box h3 {
+            margin: 0 0 8px 0;
+            font-size: 15px;
+        }
+
+        .info-item {
+            padding: 4px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        @media (max-width: 768px) {
+            #map {
+                height: calc(100vh - 165px);
+            }
+
+            #legend,
+            .info-box {
+                left: 10px;
+                right: 10px;
+                min-width: auto;
+            }
+
+            .info-box {
+                top: auto;
+                bottom: 140px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="topo">
+        <h2>Mapa de Despacho por Equipe</h2>
+        <input type="file" id="input-excel" accept=".xlsx" />
+    </div>
+
+    <div id="controls">
+        <label for="searchEquipe">Pesquisar equipe:</label>
+        <input type="text" id="searchEquipe" placeholder="Digite para filtrar equipes..." />
+
+        <label for="select-equipe">Equipe:</label>
+        <select id="select-equipe" size="5"></select>
+
+        <button id="btn-limpar">Limpar seleção</button>
+    </div>
+
+    <div id="map"></div>
+    <div id="legend"></div>
+    <div class="info-box" id="infoEquipes"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+    <script>
+        const input = document.getElementById('input-excel');
+        const selectEquipe = document.getElementById('select-equipe');
+        const btnLimpar = document.getElementById('btn-limpar');
+        const controlsDiv = document.getElementById('controls');
+        const legendDiv = document.getElementById('legend');
+        const infoEquipes = document.getElementById('infoEquipes');
+        const searchEquipe = document.getElementById('searchEquipe');
+
+        let map, layersGroup;
+        let dadosOriginais = [];
+        const coresBase = [
+            'blue', 'green', 'red', 'orange', 'purple',
+            'brown', 'darkred', 'cadetblue', 'pink', 'black'
+        ];
+
+        function initMap(lat = -7.12, lon = -36.5, zoom = 8) {
+            if (map) map.remove();
+
+            map = L.map('map').setView([lat, lon], zoom);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            layersGroup = L.layerGroup().addTo(map);
+        }
+
+        function hashCode(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return hash;
+        }
+
+        function getCorEquipe(nomeEquipe) {
+            return coresBase[Math.abs(hashCode(nomeEquipe)) % coresBase.length];
+        }
+
+        function formatarNumero(valor) {
+            const num = Number(valor);
+            if (isNaN(num)) return '-';
+            return num.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function popularSelectEquipes() {
+            const contagem = {};
+
+            dadosOriginais.forEach(r => {
+                if (!contagem[r.equipe]) contagem[r.equipe] = 0;
+                contagem[r.equipe]++;
+            });
+
+            const equipes = Object.keys(contagem).sort();
+
+            selectEquipe.innerHTML = '';
+
+            equipes.forEach(eq => {
+                const opt = document.createElement('option');
+                opt.value = eq;
+                opt.textContent = `${eq} (${contagem[eq]})`;
+                selectEquipe.appendChild(opt);
+            });
+
+            controlsDiv.style.display = 'flex';
+            renderResumoEquipes(contagem);
+        }
+
+        function renderResumoEquipes(contagem) {
+            const lista = Object.entries(contagem)
+                .sort((a, b) => b[1] - a[1]);
+
+            infoEquipes.innerHTML = `
+                <h3>Despachados por equipe</h3>
+                ${lista.map(([equipe, qtd]) => `
+                    <div class="info-item">
+                        <strong>${equipe}</strong>: ${qtd}
+                    </div>
+                `).join('')}
+            `;
+
+            infoEquipes.style.display = 'block';
+        }
+
+        function desenharMapa(equipeSelecionada) {
+            layersGroup.clearLayers();
+            legendDiv.style.display = 'none';
+
+            if (!equipeSelecionada) return;
+
+            let dadosEquipe = dadosOriginais.filter(r =>
+                r.equipe === equipeSelecionada &&
+                !isNaN(r.lat) &&
+                !isNaN(r.lon)
+            );
+
+            if (dadosEquipe.length === 0) {
+                alert(`Nenhum ponto válido encontrado para a equipe "${equipeSelecionada}".`);
+                return;
+            }
+
+            dadosEquipe.sort((a, b) => {
+                const livroA = Number(a.livro);
+                const livroB = Number(b.livro);
+
+                if (!isNaN(livroA) && !isNaN(livroB) && livroA !== livroB) {
+                    return livroA - livroB;
+                }
+
+                return String(a.cdc).localeCompare(String(b.cdc), 'pt-BR', { numeric: true });
+            });
+
+            const corEquipe = getCorEquipe(equipeSelecionada);
+            const latlngs = [];
+
+            dadosEquipe.forEach((ponto, idx) => {
+                const popupContent = `
+                    <b>Parada ${idx + 1}</b><br>
+                    <b>Equipe:</b> ${ponto.equipe || '-'}<br>
+                    <b>CDC:</b> ${ponto.cdc || '-'}<br>
+                    <b>Bairro:</b> ${ponto.bairro || '-'}<br>
+                    <b>Tipo:</b> ${ponto.tipo || '-'}<br>
+                    <b>Regional:</b> ${ponto.regional || '-'}<br>
+                    <b>Livro:</b> ${ponto.livro || '-'}<br>
+                    <b>Rota:</b> ${ponto.livro_local_rota || '-'}<br>
+                    <b>Valor esperado:</b> R$ ${formatarNumero(ponto.valor_esperado)}<br>
+                    <b>Valor total devido:</b> R$ ${formatarNumero(ponto.valor_total_devido)}<br>
+                    <b>Rural/Urbano:</b> ${ponto.rural_urban || '-'}
+                `;
+
+                L.circleMarker([ponto.lat, ponto.lon], {
+                    radius: 8,
+                    fillColor: corEquipe,
+                    color: '#000',
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.85
+                }).bindPopup(popupContent).addTo(layersGroup);
+
+                L.marker([ponto.lat + 0.00015, ponto.lon], {
+                    icon: L.divIcon({
+                        className: 'numero-balao',
+                        html: `<div style="
+                            font-size: 11pt;
+                            font-weight: bold;
+                            color: white;
+                            background: ${corEquipe};
+                            border-radius: 50%;
+                            width: 26px;
+                            height: 26px;
+                            line-height: 26px;
+                            text-align: center;
+                            border: 2px solid black;">
+                            ${idx + 1}
+                        </div>`
+                    }),
+                    interactive: false
+                }).addTo(layersGroup);
+
+                latlngs.push([ponto.lat, ponto.lon]);
+            });
+
+            if (latlngs.length > 1) {
+                L.polyline(latlngs, {
+                    color: corEquipe,
+                    weight: 4,
+                    opacity: 0.7
+                }).addTo(layersGroup);
+            }
+
+            const bounds = L.latLngBounds(latlngs);
+            map.fitBounds(bounds, { padding: [30, 30] });
+
+            const primeiraRegional = dadosEquipe[0]?.regional || '-';
+            const primeiroTipo = dadosEquipe[0]?.tipo || '-';
+
+            legendDiv.innerHTML = `
+                <b>Equipe:</b> ${equipeSelecionada}<br>
+                <b>Qtd. despachada:</b> ${dadosEquipe.length}<br>
+                <b>Regional:</b> ${primeiraRegional}<br>
+                <b>Tipo:</b> ${primeiroTipo}
+            `;
+            legendDiv.style.display = 'block';
+        }
+
+        searchEquipe.addEventListener('input', () => {
+            const filtro = searchEquipe.value.toLowerCase();
+
+            for (let option of selectEquipe.options) {
+                const texto = option.text.toLowerCase();
+                option.style.display = texto.includes(filtro) ? 'block' : 'none';
+            }
+        });
+
+        input.addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+
+            reader.onload = evt => {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+                dadosOriginais = jsonData
+                    .map(r => ({
+                        equipe: String(r['NOME_EQUIPE'] || '').trim(),
+                        cdc: String(r['NUMCDC_VINCULADO'] || '').trim(),
+                        bairro: String(r['BAIRRO'] || '').trim(),
+                        tipo: String(r['TIPO'] || '').trim(),
+                        regional: String(r['REGIONAL'] || '').trim(),
+                        livro_local_rota: String(r['Livro_local_rota'] || '').trim(),
+                        livro: r['LIVRO'],
+                        lat: parseFloat(r['LAT']),
+                        lon: parseFloat(r['LONG']),
+                        valor_esperado: r['valor_esperado'],
+                        valor_total_devido: r['valor_total_devido'],
+                        rural_urban: String(r['RURAL_OR_URBAN'] || '').trim()
+                    }))
+                    .filter(r =>
+                        r.equipe !== '' &&
+                        !isNaN(r.lat) &&
+                        !isNaN(r.lon)
+                    );
+
+                if (dadosOriginais.length === 0) {
+                    alert('Nenhum dado válido foi encontrado no Excel.');
+                    return;
+                }
+
+                popularSelectEquipes();
+                layersGroup.clearLayers();
+                legendDiv.style.display = 'none';
+                searchEquipe.value = '';
+
+                const bounds = L.latLngBounds(
+                    dadosOriginais.map(r => [r.lat, r.lon])
+                );
+                map.fitBounds(bounds, { padding: [30, 30] });
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+
+        selectEquipe.addEventListener('change', e => {
+            desenharMapa(e.target.value);
+        });
+
+        btnLimpar.addEventListener('click', () => {
+            selectEquipe.selectedIndex = -1;
+            searchEquipe.value = '';
+            layersGroup.clearLayers();
+            legendDiv.style.display = 'none';
+
+            for (let option of selectEquipe.options) {
+                option.style.display = 'block';
+            }
+
+            if (dadosOriginais.length > 0) {
+                const bounds = L.latLngBounds(
+                    dadosOriginais.map(r => [r.lat, r.lon])
+                );
+                map.fitBounds(bounds, { padding: [30, 30] });
+            }
+        });
+
+        initMap();
+    </script>
+</body>
+</html>
