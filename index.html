@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8" />
-    <title>Mapa de Despacho por Equipe</title>
+    <title>Mapa de Despacho por Equipes</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" crossorigin="" />
 
@@ -39,7 +39,7 @@
             display: none;
             flex-wrap: wrap;
             gap: 8px;
-            align-items: center;
+            align-items: flex-start;
             background: #fff;
             border-bottom: 1px solid #ddd;
         }
@@ -67,12 +67,12 @@
         }
 
         #select-equipe {
-            min-width: 280px;
-            max-width: 320px;
+            min-width: 320px;
+            max-width: 380px;
         }
 
         #map {
-            height: calc(100vh - 118px);
+            height: calc(100vh - 126px);
             width: 100%;
         }
 
@@ -86,8 +86,11 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.25);
             font-size: 14px;
             z-index: 1000;
-            min-width: 260px;
+            min-width: 280px;
+            max-width: 350px;
             display: none;
+            max-height: 260px;
+            overflow-y: auto;
         }
 
         .numero-balao div {
@@ -105,7 +108,7 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.25);
             font-size: 14px;
             z-index: 1000;
-            max-height: 260px;
+            max-height: 300px;
             overflow-y: auto;
             min-width: 260px;
             display: none;
@@ -121,9 +124,30 @@
             border-bottom: 1px solid #eee;
         }
 
+        .legenda-equipe {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .legenda-cor {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1px solid #000;
+            display: inline-block;
+        }
+
+        .dica {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
         @media (max-width: 768px) {
             #map {
-                height: calc(100vh - 165px);
+                height: calc(100vh - 190px);
             }
 
             #legend,
@@ -131,11 +155,17 @@
                 left: 10px;
                 right: 10px;
                 min-width: auto;
+                max-width: none;
             }
 
             .info-box {
                 top: auto;
-                bottom: 140px;
+                bottom: 150px;
+            }
+
+            #select-equipe {
+                min-width: 100%;
+                max-width: 100%;
             }
         }
     </style>
@@ -143,18 +173,25 @@
 <body>
 
     <div id="topo">
-        <h2>Mapa de Despacho por Equipe</h2>
+        <h2>Mapa de Despacho por Equipes</h2>
         <input type="file" id="input-excel" accept=".xlsx" />
     </div>
 
     <div id="controls">
-        <label for="searchEquipe">Pesquisar equipe:</label>
-        <input type="text" id="searchEquipe" placeholder="Digite para filtrar equipes..." />
+        <div>
+            <label for="searchEquipe">Pesquisar equipe:</label><br>
+            <input type="text" id="searchEquipe" placeholder="Digite para filtrar equipes..." />
+        </div>
 
-        <label for="select-equipe">Equipe:</label>
-        <select id="select-equipe" size="5"></select>
+        <div>
+            <label for="select-equipe">Equipes:</label><br>
+            <select id="select-equipe" size="8" multiple></select>
+            <div class="dica">Segure Ctrl para selecionar várias equipes</div>
+        </div>
 
-        <button id="btn-limpar">Limpar seleção</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:22px;">
+            <button id="btn-limpar">Limpar seleção</button>
+        </div>
     </div>
 
     <div id="map"></div>
@@ -175,9 +212,11 @@
 
         let map, layersGroup;
         let dadosOriginais = [];
+
         const coresBase = [
-            'blue', 'green', 'red', 'orange', 'purple',
-            'brown', 'darkred', 'cadetblue', 'pink', 'black'
+            '#1f77b4', '#2ca02c', '#d62728', '#ff7f0e', '#9467bd',
+            '#8c564b', '#e377c2', '#17becf', '#bcbd22', '#7f7f7f',
+            '#393b79', '#637939', '#8c6d31', '#843c39', '#7b4173'
         ];
 
         function initMap(lat = -7.12, lon = -36.5, zoom = 8) {
@@ -185,9 +224,11 @@
 
             map = L.map('map').setView([lat, lon], zoom);
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap'
+            // Troca do provider para evitar o bloqueio 403 do OSM
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                subdomains: 'abcd',
+                maxZoom: 20,
+                attribution: '&copy; OpenStreetMap &copy; CARTO'
             }).addTo(map);
 
             layersGroup = L.layerGroup().addTo(map);
@@ -238,8 +279,7 @@
         }
 
         function renderResumoEquipes(contagem) {
-            const lista = Object.entries(contagem)
-                .sort((a, b) => b[1] - a[1]);
+            const lista = Object.entries(contagem).sort((a, b) => b[1] - a[1]);
 
             infoEquipes.innerHTML = `
                 <h3>Despachados por equipe</h3>
@@ -253,105 +293,119 @@
             infoEquipes.style.display = 'block';
         }
 
-        function desenharMapa(equipeSelecionada) {
+        function getEquipesSelecionadas() {
+            return Array.from(selectEquipe.selectedOptions).map(opt => {
+                const texto = opt.value || '';
+                return texto;
+            });
+        }
+
+        function desenharMapa(equipesSelecionadas) {
             layersGroup.clearLayers();
             legendDiv.style.display = 'none';
 
-            if (!equipeSelecionada) return;
-
-            let dadosEquipe = dadosOriginais.filter(r =>
-                r.equipe === equipeSelecionada &&
-                !isNaN(r.lat) &&
-                !isNaN(r.lon)
-            );
-
-            if (dadosEquipe.length === 0) {
-                alert(`Nenhum ponto válido encontrado para a equipe "${equipeSelecionada}".`);
+            if (!equipesSelecionadas || equipesSelecionadas.length === 0) {
                 return;
             }
 
-            dadosEquipe.sort((a, b) => {
-                const livroA = Number(a.livro);
-                const livroB = Number(b.livro);
+            let todosLatLngs = [];
+            let legendHtml = `<b>Equipes selecionadas:</b> ${equipesSelecionadas.length}<br><br>`;
 
-                if (!isNaN(livroA) && !isNaN(livroB) && livroA !== livroB) {
-                    return livroA - livroB;
+            equipesSelecionadas.forEach(equipeSelecionada => {
+                let dadosEquipe = dadosOriginais.filter(r =>
+                    r.equipe === equipeSelecionada &&
+                    !isNaN(r.lat) &&
+                    !isNaN(r.lon)
+                );
+
+                if (dadosEquipe.length === 0) {
+                    return;
                 }
 
-                return String(a.cdc).localeCompare(String(b.cdc), 'pt-BR', { numeric: true });
-            });
+                dadosEquipe.sort((a, b) => {
+                    const livroA = Number(a.livro);
+                    const livroB = Number(b.livro);
 
-            const corEquipe = getCorEquipe(equipeSelecionada);
-            const latlngs = [];
+                    if (!isNaN(livroA) && !isNaN(livroB) && livroA !== livroB) {
+                        return livroA - livroB;
+                    }
 
-            dadosEquipe.forEach((ponto, idx) => {
-                const popupContent = `
-                    <b>Parada ${idx + 1}</b><br>
-                    <b>Equipe:</b> ${ponto.equipe || '-'}<br>
-                    <b>CDC:</b> ${ponto.cdc || '-'}<br>
-                    <b>Bairro:</b> ${ponto.bairro || '-'}<br>
-                    <b>Tipo:</b> ${ponto.tipo || '-'}<br>
-                    <b>Regional:</b> ${ponto.regional || '-'}<br>
-                    <b>Livro:</b> ${ponto.livro || '-'}<br>
-                    <b>Rota:</b> ${ponto.livro_local_rota || '-'}<br>
-                    <b>Valor esperado:</b> R$ ${formatarNumero(ponto.valor_esperado)}<br>
-                    <b>Valor total devido:</b> R$ ${formatarNumero(ponto.valor_total_devido)}<br>
-                    <b>Rural/Urbano:</b> ${ponto.rural_urban || '-'}
+                    return String(a.cdc).localeCompare(String(b.cdc), 'pt-BR', { numeric: true });
+                });
+
+                const corEquipe = getCorEquipe(equipeSelecionada);
+                const latlngsEquipe = [];
+
+                dadosEquipe.forEach((ponto, idx) => {
+                    const popupContent = `
+                        <b>Parada ${idx + 1}</b><br>
+                        <b>Equipe:</b> ${ponto.equipe || '-'}<br>
+                        <b>CDC:</b> ${ponto.cdc || '-'}<br>
+                        <b>Bairro:</b> ${ponto.bairro || '-'}<br>
+                        <b>Tipo:</b> ${ponto.tipo || '-'}<br>
+                        <b>Regional:</b> ${ponto.regional || '-'}<br>
+                        <b>Livro:</b> ${ponto.livro || '-'}<br>
+                        <b>Rota:</b> ${ponto.livro_local_rota || '-'}<br>
+                        <b>Valor esperado:</b> R$ ${formatarNumero(ponto.valor_esperado)}<br>
+                        <b>Valor total devido:</b> R$ ${formatarNumero(ponto.valor_total_devido)}<br>
+                        <b>Rural/Urbano:</b> ${ponto.rural_urban || '-'}
+                    `;
+
+                    L.circleMarker([ponto.lat, ponto.lon], {
+                        radius: 8,
+                        fillColor: corEquipe,
+                        color: '#000',
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 0.85
+                    }).bindPopup(popupContent).addTo(layersGroup);
+
+                    L.marker([ponto.lat + 0.00015, ponto.lon], {
+                        icon: L.divIcon({
+                            className: 'numero-balao',
+                            html: `<div style="
+                                font-size: 10pt;
+                                font-weight: bold;
+                                color: white;
+                                background: ${corEquipe};
+                                border-radius: 50%;
+                                width: 24px;
+                                height: 24px;
+                                line-height: 24px;
+                                text-align: center;
+                                border: 2px solid black;">
+                                ${idx + 1}
+                            </div>`
+                        }),
+                        interactive: false
+                    }).addTo(layersGroup);
+
+                    latlngsEquipe.push([ponto.lat, ponto.lon]);
+                    todosLatLngs.push([ponto.lat, ponto.lon]);
+                });
+
+                if (latlngsEquipe.length > 1) {
+                    L.polyline(latlngsEquipe, {
+                        color: corEquipe,
+                        weight: 4,
+                        opacity: 0.7
+                    }).addTo(layersGroup);
+                }
+
+                legendHtml += `
+                    <div class="legenda-equipe">
+                        <span class="legenda-cor" style="background:${corEquipe};"></span>
+                        <span><b>${equipeSelecionada}</b> — ${dadosEquipe.length} pontos</span>
+                    </div>
                 `;
-
-                L.circleMarker([ponto.lat, ponto.lon], {
-                    radius: 8,
-                    fillColor: corEquipe,
-                    color: '#000',
-                    weight: 1,
-                    opacity: 1,
-                    fillOpacity: 0.85
-                }).bindPopup(popupContent).addTo(layersGroup);
-
-                L.marker([ponto.lat + 0.00015, ponto.lon], {
-                    icon: L.divIcon({
-                        className: 'numero-balao',
-                        html: `<div style="
-                            font-size: 11pt;
-                            font-weight: bold;
-                            color: white;
-                            background: ${corEquipe};
-                            border-radius: 50%;
-                            width: 26px;
-                            height: 26px;
-                            line-height: 26px;
-                            text-align: center;
-                            border: 2px solid black;">
-                            ${idx + 1}
-                        </div>`
-                    }),
-                    interactive: false
-                }).addTo(layersGroup);
-
-                latlngs.push([ponto.lat, ponto.lon]);
             });
 
-            if (latlngs.length > 1) {
-                L.polyline(latlngs, {
-                    color: corEquipe,
-                    weight: 4,
-                    opacity: 0.7
-                }).addTo(layersGroup);
+            if (todosLatLngs.length > 0) {
+                const bounds = L.latLngBounds(todosLatLngs);
+                map.fitBounds(bounds, { padding: [30, 30] });
+                legendDiv.innerHTML = legendHtml;
+                legendDiv.style.display = 'block';
             }
-
-            const bounds = L.latLngBounds(latlngs);
-            map.fitBounds(bounds, { padding: [30, 30] });
-
-            const primeiraRegional = dadosEquipe[0]?.regional || '-';
-            const primeiroTipo = dadosEquipe[0]?.tipo || '-';
-
-            legendDiv.innerHTML = `
-                <b>Equipe:</b> ${equipeSelecionada}<br>
-                <b>Qtd. despachada:</b> ${dadosEquipe.length}<br>
-                <b>Regional:</b> ${primeiraRegional}<br>
-                <b>Tipo:</b> ${primeiroTipo}
-            `;
-            legendDiv.style.display = 'block';
         }
 
         searchEquipe.addEventListener('input', () => {
@@ -416,12 +470,13 @@
             reader.readAsArrayBuffer(file);
         });
 
-        selectEquipe.addEventListener('change', e => {
-            desenharMapa(e.target.value);
+        selectEquipe.addEventListener('change', () => {
+            const equipesSelecionadas = getEquipesSelecionadas();
+            desenharMapa(equipesSelecionadas);
         });
 
         btnLimpar.addEventListener('click', () => {
-            selectEquipe.selectedIndex = -1;
+            Array.from(selectEquipe.options).forEach(opt => opt.selected = false);
             searchEquipe.value = '';
             layersGroup.clearLayers();
             legendDiv.style.display = 'none';
