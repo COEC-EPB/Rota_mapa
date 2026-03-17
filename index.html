@@ -238,7 +238,6 @@
                 zoomControl: true
             }).setView([lat, lon], zoom);
 
-            // Visual mais próximo do Google
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                 subdomains: 'abcd',
                 maxZoom: 20,
@@ -343,7 +342,6 @@
                 });
 
                 const corEquipe = getCorEquipe(equipeSelecionada);
-                const latlngsEquipe = [];
 
                 dadosEquipe.forEach((ponto, idx) => {
                     const popupContent = `
@@ -390,18 +388,8 @@
                         interactive: false
                     }).addTo(layersGroup);
 
-                    latlngsEquipe.push([ponto.lat, ponto.lon]);
                     todosLatLngs.push([ponto.lat, ponto.lon]);
                 });
-
-                if (latlngsEquipe.length > 1) {
-                    L.polyline(latlngsEquipe, {
-                        color: corEquipe,
-                        weight: 5,
-                        opacity: 0.55,
-                        lineJoin: 'round'
-                    }).addTo(layersGroup);
-                }
 
                 legendHtml += `
                     <div class="legenda-equipe">
