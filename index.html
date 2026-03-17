@@ -84,44 +84,34 @@
             width: 100%;
         }
 
-        #legend {
+        .painel-flutuante {
             position: fixed;
-            bottom: 20px;
             right: 20px;
-            background: rgba(255,255,255,0.96);
+            background: rgba(255,255,255,0.97);
             backdrop-filter: blur(4px);
             padding: 12px;
             border-radius: 12px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.18);
             font-size: 14px;
             z-index: 1000;
-            min-width: 290px;
+            min-width: 280px;
             max-width: 360px;
-            display: none;
-            max-height: 280px;
+            max-height: 300px;
             overflow-y: auto;
+            display: none;
+        }
+
+        #legend {
+            bottom: 80px;
+        }
+
+        #infoEquipes {
+            top: 138px;
         }
 
         .numero-balao div {
             background-repeat: no-repeat;
             background-position: center bottom;
-        }
-
-        .info-box {
-            position: fixed;
-            top: 138px;
-            right: 20px;
-            background: rgba(255,255,255,0.96);
-            backdrop-filter: blur(4px);
-            padding: 12px;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.18);
-            font-size: 14px;
-            z-index: 1000;
-            max-height: 300px;
-            overflow-y: auto;
-            min-width: 260px;
-            display: none;
         }
 
         .info-box h3 {
@@ -157,22 +147,64 @@
             margin-top: 4px;
         }
 
+        .acoes-flutuantes {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1100;
+        }
+
+        .btn-flutuante {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 999px;
+            padding: 10px 14px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+
+        .btn-flutuante:hover {
+            background: #1666c1;
+        }
+
+        .btn-flutuante.ativo {
+            background: #0f4fb8;
+        }
+
         @media (max-width: 768px) {
             #map {
                 height: calc(100vh - 215px);
             }
 
-            #legend,
-            .info-box {
+            .painel-flutuante {
                 left: 10px;
                 right: 10px;
                 min-width: auto;
                 max-width: none;
             }
 
-            .info-box {
+            #infoEquipes {
                 top: auto;
-                bottom: 160px;
+                bottom: 140px;
+            }
+
+            #legend {
+                bottom: 200px;
+            }
+
+            .acoes-flutuantes {
+                right: 10px;
+                left: 10px;
+                bottom: 10px;
+            }
+
+            .btn-flutuante {
+                width: 100%;
             }
 
             #select-equipe {
@@ -207,8 +239,14 @@
     </div>
 
     <div id="map"></div>
-    <div id="legend"></div>
-    <div class="info-box" id="infoEquipes"></div>
+
+    <div class="painel-flutuante info-box" id="infoEquipes"></div>
+    <div class="painel-flutuante" id="legend"></div>
+
+    <div class="acoes-flutuantes">
+        <button id="btn-toggle-info" class="btn-flutuante">Despachados por equipe</button>
+        <button id="btn-toggle-legend" class="btn-flutuante">Equipes selecionadas</button>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" crossorigin=""></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
@@ -221,6 +259,8 @@
         const legendDiv = document.getElementById('legend');
         const infoEquipes = document.getElementById('infoEquipes');
         const searchEquipe = document.getElementById('searchEquipe');
+        const btnToggleInfo = document.getElementById('btn-toggle-info');
+        const btnToggleLegend = document.getElementById('btn-toggle-legend');
 
         let map, layersGroup;
         let dadosOriginais = [];
@@ -268,6 +308,17 @@
             });
         }
 
+        function togglePainel(painel, botao) {
+            const aberto = painel.style.display === 'block';
+            painel.style.display = aberto ? 'none' : 'block';
+            botao.classList.toggle('ativo', !aberto);
+        }
+
+        function fecharPainel(painel, botao) {
+            painel.style.display = 'none';
+            botao.classList.remove('ativo');
+        }
+
         function popularSelectEquipes() {
             const contagem = {};
 
@@ -302,8 +353,6 @@
                     </div>
                 `).join('')}
             `;
-
-            infoEquipes.style.display = 'block';
         }
 
         function getEquipesSelecionadas() {
@@ -312,14 +361,15 @@
 
         function desenharMapa(equipesSelecionadas) {
             layersGroup.clearLayers();
-            legendDiv.style.display = 'none';
+            fecharPainel(legendDiv, btnToggleLegend);
 
             if (!equipesSelecionadas || equipesSelecionadas.length === 0) {
+                legendDiv.innerHTML = '';
                 return;
             }
 
             let todosLatLngs = [];
-            let legendHtml = `<b>Equipes selecionadas:</b> ${equipesSelecionadas.length}<br><br>`;
+            let legendHtml = `<h3 style="margin:0 0 10px 0;">Equipes selecionadas</h3>`;
 
             equipesSelecionadas.forEach(equipeSelecionada => {
                 let dadosEquipe = dadosOriginais.filter(r =>
@@ -399,13 +449,22 @@
                 `;
             });
 
+            legendDiv.innerHTML = legendHtml;
+
             if (todosLatLngs.length > 0) {
                 const bounds = L.latLngBounds(todosLatLngs);
                 map.fitBounds(bounds, { padding: [30, 30] });
-                legendDiv.innerHTML = legendHtml;
-                legendDiv.style.display = 'block';
             }
         }
+
+        btnToggleInfo.addEventListener('click', () => {
+            togglePainel(infoEquipes, btnToggleInfo);
+        });
+
+        btnToggleLegend.addEventListener('click', () => {
+            if (!legendDiv.innerHTML.trim()) return;
+            togglePainel(legendDiv, btnToggleLegend);
+        });
 
         searchEquipe.addEventListener('input', () => {
             const filtro = searchEquipe.value.toLowerCase();
@@ -457,8 +516,11 @@
 
                 popularSelectEquipes();
                 layersGroup.clearLayers();
-                legendDiv.style.display = 'none';
                 searchEquipe.value = '';
+                legendDiv.innerHTML = '';
+
+                fecharPainel(infoEquipes, btnToggleInfo);
+                fecharPainel(legendDiv, btnToggleLegend);
 
                 const bounds = L.latLngBounds(
                     dadosOriginais.map(r => [r.lat, r.lon])
@@ -477,7 +539,9 @@
             Array.from(selectEquipe.options).forEach(opt => opt.selected = false);
             searchEquipe.value = '';
             layersGroup.clearLayers();
-            legendDiv.style.display = 'none';
+            legendDiv.innerHTML = '';
+
+            fecharPainel(legendDiv, btnToggleLegend);
 
             for (let option of selectEquipe.options) {
                 option.style.display = 'block';
