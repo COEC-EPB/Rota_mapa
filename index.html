@@ -2,9 +2,11 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8" />
-    <title>Mapa de Despacho</title>
+    <title>Mapa de Serviços</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" crossorigin="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
 
     <style>
         html, body {
@@ -64,7 +66,6 @@
 
         .painel-flutuante {
             position: fixed;
-            right: 20px;
             background: rgba(255,255,255,0.97);
             backdrop-filter: blur(4px);
             padding: 12px;
@@ -73,60 +74,34 @@
             font-size: 14px;
             z-index: 1000;
             min-width: 280px;
-            max-width: 360px;
-            max-height: 300px;
+            max-width: 430px;
+            max-height: 420px;
             overflow-y: auto;
             display: none;
         }
 
-        #legend {
+        #painelFiltros {
+            top: 80px;
+            left: 70px;
+            min-width: 400px;
+            max-width: 460px;
+        }
+
+        #painelResumo {
+            top: 80px;
+            right: 20px;
+        }
+
+        #painelSelecionados {
             bottom: 80px;
+            right: 20px;
         }
 
-        #infoEquipes {
+        .acoes-topo-esquerda {
+            position: fixed;
+            left: 70px;
             top: 80px;
-        }
-
-        #painelSelecao {
-            top: 80px;
-            left: 20px;
-            right: auto;
-            min-width: 360px;
-            max-width: 420px;
-        }
-
-        .info-box h3,
-        .painel-flutuante h3 {
-            margin: 0 0 8px 0;
-            font-size: 15px;
-            color: #222;
-        }
-
-        .info-item {
-            padding: 5px 0;
-            border-bottom: 1px solid #eeeeee;
-        }
-
-        .legenda-equipe {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 7px;
-        }
-
-        .legenda-cor {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 1px solid rgba(0,0,0,0.25);
-            display: inline-block;
-            flex-shrink: 0;
-        }
-
-        .dica {
-            font-size: 12px;
-            color: #666;
-            margin-top: 4px;
+            z-index: 1100;
         }
 
         .acoes-flutuantes {
@@ -136,13 +111,6 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            z-index: 1100;
-        }
-
-        .acoes-topo-esquerda {
-            position: fixed;
-            left: 45px;
-            top: 80px;
             z-index: 1100;
         }
 
@@ -157,24 +125,56 @@
             cursor: pointer;
         }
 
-        .btn-flutuante:hover {
-            background: #1666c1;
-        }
-
         .btn-flutuante.ativo {
             background: #0f4fb8;
         }
 
-        #searchEquipe {
+        #searchBairro, #searchCodserv {
             width: 100%;
             box-sizing: border-box;
             margin-bottom: 8px;
         }
 
-        #select-equipe {
+        #select-bairro, #select-regional, #select-codserv {
             width: 100%;
-            min-width: 100%;
-            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        #select-bairro, #select-codserv {
+            margin-top: 8px;
+        }
+
+        .dica {
+            font-size: 12px;
+            color: #666;
+            margin-top: 6px;
+        }
+
+        .painel-acoes {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .legenda-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .legenda-cor {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.3);
+            flex-shrink: 0;
+        }
+
+        .info-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
         }
 
         .numero-label {
@@ -190,11 +190,8 @@
             cursor: pointer;
         }
 
-        .painel-selecao-acoes {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-            flex-wrap: wrap;
+        .bloco-filtro {
+            margin-bottom: 12px;
         }
 
         @media (max-width: 768px) {
@@ -209,16 +206,16 @@
                 max-width: none;
             }
 
-            .acoes-flutuantes {
-                right: 10px;
-                left: 10px;
-                bottom: 10px;
-            }
-
             .acoes-topo-esquerda {
-                left: 10px;
+                left: 55px;
                 right: 10px;
                 top: 72px;
+            }
+
+            .acoes-flutuantes {
+                left: 10px;
+                right: 10px;
+                bottom: 10px;
             }
 
             .btn-flutuante {
@@ -230,52 +227,103 @@
 <body>
 
     <div id="topo">
-        <h2>Mapa de Despacho por Equipes</h2>
+        <h2>Mapa de Serviços por Bairro</h2>
         <input type="file" id="input-excel" accept=".xlsx" />
     </div>
 
     <div id="map"></div>
 
     <div class="acoes-topo-esquerda">
-        <button id="btn-toggle-selecao" class="btn-flutuante">Selecionar equipes</button>
+        <button id="btn-toggle-filtros" class="btn-flutuante">Filtros</button>
     </div>
 
-    <div class="painel-flutuante" id="painelSelecao">
-        <h3>Selecionar equipes</h3>
-        <input type="text" id="searchEquipe" placeholder="Digite para filtrar equipes..." />
-        <select id="select-equipe" size="10" multiple></select>
-        <div class="dica">Segure Ctrl para selecionar várias equipes</div>
-        <div class="painel-selecao-acoes">
+    <div class="painel-flutuante" id="painelFiltros">
+        <h3 style="margin:0 0 8px 0;">Filtros</h3>
+
+        <div class="bloco-filtro">
+            <label for="select-regional"><strong>Regional</strong></label>
+            <select id="select-regional">
+                <option value="">Todas</option>
+                <option value="1">LESTE</option>
+                <option value="2">CENTRO</option>
+                <option value="3">OESTE</option>
+            </select>
+        </div>
+
+        <div class="bloco-filtro">
+            <label for="searchCodserv"><strong>Pesquisar codserv</strong></label>
+            <input type="text" id="searchCodserv" placeholder="Digite para filtrar códigos..." />
+
+            <label for="select-codserv"><strong>Códigos de serviço</strong></label>
+            <select id="select-codserv" size="6" multiple></select>
+            <div class="dica">Segure Ctrl para selecionar vários códigos</div>
+        </div>
+
+        <div class="bloco-filtro">
+            <label for="searchBairro"><strong>Pesquisar bairro</strong></label>
+            <input type="text" id="searchBairro" placeholder="Digite para filtrar bairros..." />
+
+            <label for="select-bairro"><strong>Bairros</strong></label>
+            <select id="select-bairro" size="8" multiple></select>
+            <div class="dica">Segure Ctrl para selecionar vários bairros</div>
+        </div>
+
+        <div class="painel-acoes">
             <button id="btn-limpar">Limpar seleção</button>
         </div>
     </div>
 
-    <div class="painel-flutuante info-box" id="infoEquipes"></div>
-    <div class="painel-flutuante" id="legend"></div>
+    <div class="painel-flutuante" id="painelResumo"></div>
+    <div class="painel-flutuante" id="painelSelecionados"></div>
 
     <div class="acoes-flutuantes">
-        <button id="btn-toggle-info" class="btn-flutuante">Despachados por equipe</button>
-        <button id="btn-toggle-legend" class="btn-flutuante">Equipes selecionadas</button>
+        <button id="btn-toggle-resumo" class="btn-flutuante">Serviços por bairro</button>
+        <button id="btn-toggle-selecionados" class="btn-flutuante">Bairros selecionados</button>
+        <button id="btn-selecao-poligono" class="btn-flutuante">Desenhar seleção</button>
+        <button id="btn-limpar-selecao-mapa" class="btn-flutuante">Limpar seleção do mapa</button>
+        <button id="btn-copiar-numos" class="btn-flutuante">Copiar OS</button>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" crossorigin=""></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
     <script>
         const input = document.getElementById('input-excel');
-        const selectEquipe = document.getElementById('select-equipe');
+        const selectRegional = document.getElementById('select-regional');
+        const searchBairro = document.getElementById('searchBairro');
+        const searchCodserv = document.getElementById('searchCodserv');
+        const selectBairro = document.getElementById('select-bairro');
+        const selectCodserv = document.getElementById('select-codserv');
         const btnLimpar = document.getElementById('btn-limpar');
-        const legendDiv = document.getElementById('legend');
-        const infoEquipes = document.getElementById('infoEquipes');
-        const searchEquipe = document.getElementById('searchEquipe');
-        const btnToggleInfo = document.getElementById('btn-toggle-info');
-        const btnToggleLegend = document.getElementById('btn-toggle-legend');
-        const btnToggleSelecao = document.getElementById('btn-toggle-selecao');
-        const painelSelecao = document.getElementById('painelSelecao');
+
+        const btnToggleFiltros = document.getElementById('btn-toggle-filtros');
+        const btnToggleResumo = document.getElementById('btn-toggle-resumo');
+        const btnToggleSelecionados = document.getElementById('btn-toggle-selecionados');
+
+        const painelFiltros = document.getElementById('painelFiltros');
+        const painelResumo = document.getElementById('painelResumo');
+        const painelSelecionados = document.getElementById('painelSelecionados');
+
+        const btnSelecaoPoligono = document.getElementById('btn-selecao-poligono');
+        const btnLimparSelecaoMapa = document.getElementById('btn-limpar-selecao-mapa');
+        const btnCopiarNumos = document.getElementById('btn-copiar-numos');
 
         let map, layersGroup;
         let dadosOriginais = [];
-        let mapaCoresEquipes = {};
+        let dadosFiltradosRegional = [];
+        let dadosFiltradosCodserv = [];
+        let mapaCoresBairros = {};
+        let renderedPoints = [];
+        let numosSelecionados = new Set();
+        let drawControl;
+        let drawnItems;
+
+        const regionalMap = {
+            '1': 'LESTE',
+            '2': 'CENTRO',
+            '3': 'OESTE'
+        };
 
         const paletaCores = [
             '#1a73e8', '#ea4335', '#34a853', '#fbbc04', '#8e24aa',
@@ -300,27 +348,46 @@
             }).addTo(map);
 
             layersGroup = L.layerGroup().addTo(map);
-        }
 
-        function formatarNumero(valor) {
-            const num = Number(valor);
-            if (isNaN(num)) return '-';
-            return num.toLocaleString('pt-BR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
+            drawnItems = new L.FeatureGroup();
+            map.addLayer(drawnItems);
+
+            drawControl = new L.Control.Draw({
+                draw: {
+                    polyline: false,
+                    rectangle: false,
+                    circle: false,
+                    marker: false,
+                    circlemarker: false,
+                    polygon: {
+                        allowIntersection: false,
+                        showArea: true,
+                        shapeOptions: {
+                            color: '#1a73e8',
+                            weight: 2
+                        }
+                    }
+                },
+                edit: {
+                    featureGroup: drawnItems,
+                    edit: false,
+                    remove: true
+                }
             });
-        }
 
-        function gerarMapaCoresEquipes() {
-            const equipes = [...new Set(dadosOriginais.map(r => r.equipe).filter(Boolean))].sort();
-            mapaCoresEquipes = {};
-            equipes.forEach((equipe, index) => {
-                mapaCoresEquipes[equipe] = paletaCores[index % paletaCores.length];
+            map.on(L.Draw.Event.CREATED, function (e) {
+                drawnItems.clearLayers();
+                const layer = e.layer;
+                drawnItems.addLayer(layer);
+
+                if (e.layerType === 'polygon') {
+                    selecionarPontosPorPoligono(layer.getLatLngs()[0]);
+                }
             });
-        }
 
-        function getCorEquipe(nomeEquipe) {
-            return mapaCoresEquipes[nomeEquipe] || '#1a73e8';
+            map.on(L.Draw.Event.DELETED, function () {
+                limparSelecaoMapa();
+            });
         }
 
         function togglePainel(painel, botao) {
@@ -334,45 +401,50 @@
             if (botao) botao.classList.remove('ativo');
         }
 
-        function popularSelectEquipes() {
-            const contagem = {};
-            dadosOriginais.forEach(r => {
-                if (!contagem[r.equipe]) contagem[r.equipe] = 0;
-                contagem[r.equipe]++;
-            });
-
-            const equipes = Object.keys(contagem).sort();
-            selectEquipe.innerHTML = '';
-
-            equipes.forEach(eq => {
-                const opt = document.createElement('option');
-                opt.value = eq;
-                opt.textContent = `${eq} (${contagem[eq]})`;
-                selectEquipe.appendChild(opt);
-            });
-
-            renderResumoEquipes(contagem);
+        function formatarRegional(codreg) {
+            return regionalMap[String(codreg)] || String(codreg || '-');
         }
 
-        function renderResumoEquipes(contagem) {
-            const lista = Object.entries(contagem).sort((a, b) => b[1] - a[1]);
+        function formatarValor(v) {
+            if (v === null || v === undefined || v === '') return '-';
+            return String(v);
+        }
 
-            infoEquipes.innerHTML = `
-                <h3>Despachados por equipe</h3>
-                ${lista.map(([equipe, qtd]) => `
-                    <div class="info-item">
-                        <span class="legenda-cor" style="background:${getCorEquipe(equipe)}; margin-right:8px;"></span>
-                        <strong>${equipe}</strong>: ${qtd}
-                    </div>
-                `).join('')}
+        function normalizarTexto(v) {
+            return String(v || '').trim();
+        }
+
+        function parseCoord(valor) {
+            if (valor === null || valor === undefined || valor === '') return NaN;
+            return parseFloat(String(valor).replace(',', '.').trim());
+        }
+
+        function gerarMapaCoresBairros(dadosBase) {
+            const bairros = [...new Set(dadosBase.map(r => r.bairro).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            mapaCoresBairros = {};
+            bairros.forEach((bairro, index) => {
+                mapaCoresBairros[bairro] = paletaCores[index % paletaCores.length];
+            });
+        }
+
+        function getCorBairro(bairro) {
+            return mapaCoresBairros[bairro] || '#1a73e8';
+        }
+
+        function criarPopupContent(ponto) {
+            return `
+                <b>NUMERO DA OS:</b> ${formatarValor(ponto.numos)}<br>
+                <b>CODIGO DO SERVIÇO:</b> ${formatarValor(ponto.codserv)}<br>
+                <b>CDC:</b> ${formatarValor(ponto.num_cdc)}<br>
+                <b>Transformador:</b> ${formatarValor(ponto.num_transformador)}<br>
+                <b>EQUIPE:</b> ${formatarValor(ponto.eqp)}<br>
+                <b>Tipo de serviço:</b> ${formatarValor(ponto.tipserv)}<br>
+                <b>Bairro:</b> ${formatarValor(ponto.bairro)}<br>
+                <b>Regional:</b> ${formatarRegional(ponto.codreg)}
             `;
         }
 
-        function getEquipesSelecionadas() {
-            return Array.from(selectEquipe.selectedOptions).map(opt => opt.value);
-        }
-
-        function criarMarcadorNumero(lat, lon, idx, corEquipe) {
+        function criarMarcadorNumero(lat, lon, idx, cor) {
             return L.marker([lat, lon], {
                 icon: L.divIcon({
                     className: 'numero-label',
@@ -384,7 +456,7 @@
                         line-height: 28px;
                         text-align: center;
                         border-radius: 50%;
-                        background: ${corEquipe};
+                        background: ${cor};
                         color: #fff;
                         font-size: 11px;
                         font-weight: bold;
@@ -400,62 +472,221 @@
             });
         }
 
-        function criarPopupContent(ponto, idx) {
-            return `
-                <b>Parada ${idx + 1}</b><br>
-                <b>Equipe:</b> ${ponto.equipe || '-'}<br>
-                <b>CDC:</b> ${ponto.cdc || '-'}<br>
-                <b>Bairro:</b> ${ponto.bairro || '-'}<br>
-                <b>Tipo:</b> ${ponto.tipo || '-'}<br>
-                <b>Regional:</b> ${ponto.regional || '-'}<br>
-                <b>Livro:</b> ${ponto.livro || '-'}<br>
-                <b>Rota:</b> ${ponto.livro_local_rota || '-'}<br>
-                <b>Valor esperado:</b> R$ ${formatarNumero(ponto.valor_esperado)}<br>
-                <b>Valor total devido:</b> R$ ${formatarNumero(ponto.valor_total_devido)}<br>
-                <b>Rural/Urbano:</b> ${ponto.rural_urban || '-'}
+        function atualizarPainelResumo() {
+            const contagem = {};
+            dadosFiltradosCodserv.forEach(r => {
+                if (!contagem[r.bairro]) contagem[r.bairro] = 0;
+                contagem[r.bairro]++;
+            });
+
+            const lista = Object.entries(contagem).sort((a, b) => b[1] - a[1]);
+
+            painelResumo.innerHTML = `
+                <h3 style="margin:0 0 8px 0;">Serviços por bairro</h3>
+                ${lista.map(([bairro, qtd]) => `
+                    <div class="info-item">
+                        <span class="legenda-cor" style="background:${getCorBairro(bairro)}; margin-right:8px;"></span>
+                        <strong>${bairro}</strong>: ${qtd}
+                    </div>
+                `).join('')}
             `;
         }
 
-        function desenharMapa(equipesSelecionadas) {
-            layersGroup.clearLayers();
-            fecharPainel(legendDiv, btnToggleLegend);
+        function getCodservSelecionados() {
+            return Array.from(selectCodserv.selectedOptions).map(opt => opt.value);
+        }
 
-            if (!equipesSelecionadas || equipesSelecionadas.length === 0) {
-                legendDiv.innerHTML = '';
+        function getBairrosSelecionados() {
+            return Array.from(selectBairro.selectedOptions).map(opt => opt.value);
+        }
+
+        function atualizarListaCodservs() {
+    const filtroRegional = selectRegional.value;
+
+    dadosFiltradosRegional = dadosOriginais.filter(r => {
+        if (!filtroRegional) return true;
+        return String(r.codreg) === filtroRegional;
+    });
+
+    const mapa = {};
+
+    dadosFiltradosRegional.forEach(r => {
+        const cod = normalizarTexto(r.codserv);
+        if (!cod) return;
+
+        if (!mapa[cod]) {
+            mapa[cod] = {
+                descricao: r.dscsvc || '',
+                qtd: 0
+            };
+        }
+
+        mapa[cod].qtd++;
+    });
+
+    const codservs = Object.keys(mapa).sort((a, b) =>
+        a.localeCompare(b, 'pt-BR', { numeric: true })
+    );
+
+    selectCodserv.innerHTML = '';
+
+    codservs.forEach(cod => {
+        const opt = document.createElement('option');
+        const desc = mapa[cod].descricao || 'Sem descrição';
+
+        opt.value = cod;
+        opt.textContent = `${cod} - ${desc} (${mapa[cod].qtd})`;
+
+        selectCodserv.appendChild(opt);
+    });
+}
+
+        function atualizarListaBairros() {
+            const codservSelecionados = getCodservSelecionados();
+
+            dadosFiltradosCodserv = dadosFiltradosRegional.filter(r => {
+                if (!codservSelecionados.length) return true;
+                return codservSelecionados.includes(normalizarTexto(r.codserv));
+            });
+
+            gerarMapaCoresBairros(dadosFiltradosCodserv);
+
+            const contagem = {};
+            dadosFiltradosCodserv.forEach(r => {
+                if (!contagem[r.bairro]) contagem[r.bairro] = 0;
+                contagem[r.bairro]++;
+            });
+
+            const bairros = Object.keys(contagem).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+            selectBairro.innerHTML = '';
+            bairros.forEach(bairro => {
+                const opt = document.createElement('option');
+                opt.value = bairro;
+                opt.textContent = `${bairro} (${contagem[bairro]})`;
+                selectBairro.appendChild(opt);
+            });
+
+            atualizarPainelResumo();
+        }
+
+        function renderPainelSelecionados(bairrosSelecionados) {
+            if (!bairrosSelecionados || bairrosSelecionados.length === 0) {
+                painelSelecionados.innerHTML = '';
                 return;
             }
 
-            let todosLatLngs = [];
-            let legendHtml = `<h3 style="margin:0 0 10px 0;">Equipes selecionadas</h3>`;
+            const contagem = {};
+            bairrosSelecionados.forEach(bairro => {
+                contagem[bairro] = dadosFiltradosCodserv.filter(r => r.bairro === bairro).length;
+            });
 
-            equipesSelecionadas.forEach(equipeSelecionada => {
-                let dadosEquipe = dadosOriginais.filter(r =>
-                    r.equipe === equipeSelecionada &&
-                    !isNaN(r.lat) &&
-                    !isNaN(r.lon)
-                );
+            painelSelecionados.innerHTML = `
+                <h3 style="margin:0 0 10px 0;">Bairros selecionados</h3>
+                ${bairrosSelecionados.map(bairro => `
+                    <div class="legenda-item">
+                        <span class="legenda-cor" style="background:${getCorBairro(bairro)};"></span>
+                        <span><strong>${bairro}</strong> — ${contagem[bairro] || 0} serviços</span>
+                    </div>
+                `).join('')}
+            `;
+        }
 
-                if (dadosEquipe.length === 0) return;
-
-                dadosEquipe.sort((a, b) => {
-                    const livroA = Number(a.livro);
-                    const livroB = Number(b.livro);
-
-                    if (!isNaN(livroA) && !isNaN(livroB) && livroA !== livroB) {
-                        return livroA - livroB;
-                    }
-
-                    return String(a.cdc).localeCompare(String(b.cdc), 'pt-BR', { numeric: true });
+        function toggleSelecionadoVisual(item, selecionado) {
+            item.selected = selecionado;
+            if (selecionado) {
+                item.marker.setStyle({
+                    radius: 17,
+                    color: '#ffd54f',
+                    weight: 5,
+                    fillOpacity: 1
                 });
+            } else {
+                item.marker.setStyle({
+                    radius: 14,
+                    color: '#ffffff',
+                    weight: 3,
+                    fillOpacity: 0.95
+                });
+            }
+        }
 
-                const corEquipe = getCorEquipe(equipeSelecionada);
+        function limparSelecaoMapa() {
+            numosSelecionados.clear();
+            renderedPoints.forEach(item => toggleSelecionadoVisual(item, false));
+        }
 
-                dadosEquipe.forEach((ponto, idx) => {
-                    const popupContent = criarPopupContent(ponto, idx);
+        function pointInPolygon(point, polygon) {
+            const x = point.lng;
+            const y = point.lat;
+            let inside = false;
 
-                    const circulo = L.circleMarker([ponto.lat, ponto.lon], {
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i].lng, yi = polygon[i].lat;
+                const xj = polygon[j].lng, yj = polygon[j].lat;
+
+                const intersect = ((yi > y) !== (yj > y)) &&
+                    (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-12) + xi);
+
+                if (intersect) inside = !inside;
+            }
+
+            return inside;
+        }
+
+        function selecionarPontosPorPoligono(latlngsPoligono) {
+            limparSelecaoMapa();
+
+            renderedPoints.forEach(item => {
+                const latlng = item.marker.getLatLng();
+                if (pointInPolygon(latlng, latlngsPoligono)) {
+                    toggleSelecionadoVisual(item, true);
+                    if (item.data.numos !== null && item.data.numos !== undefined && item.data.numos !== '') {
+                        numosSelecionados.add(String(item.data.numos));
+                    }
+                }
+            });
+
+            if (numosSelecionados.size === 0) {
+                alert('Nenhuma bolinha foi selecionada na área desenhada.');
+            } else {
+                alert(`${numosSelecionados.size} OS(s) selecionada(s) no mapa.`);
+            }
+        }
+
+        function desenharMapa(bairrosSelecionados) {
+            layersGroup.clearLayers();
+            renderedPoints = [];
+            drawnItems.clearLayers();
+            limparSelecaoMapa();
+            fecharPainel(painelSelecionados, btnToggleSelecionados);
+
+            if (!bairrosSelecionados || bairrosSelecionados.length === 0) {
+                painelSelecionados.innerHTML = '';
+                return;
+            }
+
+            const dadosPlot = dadosFiltradosCodserv.filter(r => bairrosSelecionados.includes(r.bairro));
+            renderPainelSelecionados(bairrosSelecionados);
+
+            let todosLatLngs = [];
+
+            bairrosSelecionados.forEach(bairro => {
+                const dadosBairro = dadosPlot
+                    .filter(r => r.bairro === bairro)
+                    .sort((a, b) => {
+                        const aNum = Number(a.numos);
+                        const bNum = Number(b.numos);
+                        if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+                        return String(a.numos).localeCompare(String(b.numos), 'pt-BR', { numeric: true });
+                    });
+
+                const cor = getCorBairro(bairro);
+
+                dadosBairro.forEach((ponto, idx) => {
+                    const marker = L.circleMarker([ponto.lat, ponto.lon], {
                         radius: 14,
-                        fillColor: corEquipe,
+                        fillColor: cor,
                         color: '#ffffff',
                         weight: 3,
                         opacity: 1,
@@ -463,45 +694,42 @@
                         bubblingMouseEvents: false
                     });
 
-                    circulo.bindPopup(popupContent, {
-                        maxWidth: 320,
+                    marker.bindPopup(criarPopupContent(ponto), {
+                        maxWidth: 340,
                         autoPan: true
                     });
 
-                    circulo.on('mouseover', function () {
-                        this.setStyle({ radius: 16, weight: 4, fillOpacity: 1 });
+                    marker.on('mouseover', function () {
+                        const item = renderedPoints.find(x => x.marker === this);
+                        if (!item?.selected) {
+                            this.setStyle({ radius: 16, weight: 4, fillOpacity: 1 });
+                        }
                         this.bringToFront();
                     });
 
-                    circulo.on('mouseout', function () {
-                        if (!this.isPopupOpen || !this.isPopupOpen()) {
-                            this.setStyle({ radius: 14, weight: 3, fillOpacity: 0.95 });
+                    marker.on('mouseout', function () {
+                        const item = renderedPoints.find(x => x.marker === this);
+                        if (!item?.selected && !(this.isPopupOpen && this.isPopupOpen())) {
+                            this.setStyle({ radius: 14, weight: 3, fillOpacity: 0.95, color: '#ffffff' });
                         }
                     });
 
-                    circulo.on('popupopen', function () {
-                        this.setStyle({ radius: 16, weight: 4, fillOpacity: 1 });
+                    marker.on('click', function () {
                         this.bringToFront();
                     });
 
-                    circulo.on('popupclose', function () {
-                        this.setStyle({ radius: 14, weight: 3, fillOpacity: 0.95 });
+                    marker.addTo(layersGroup);
+                    criarMarcadorNumero(ponto.lat, ponto.lon, idx, cor).addTo(layersGroup);
+
+                    renderedPoints.push({
+                        marker,
+                        data: ponto,
+                        selected: false
                     });
 
-                    circulo.addTo(layersGroup);
-                    criarMarcadorNumero(ponto.lat, ponto.lon, idx, corEquipe).addTo(layersGroup);
                     todosLatLngs.push([ponto.lat, ponto.lon]);
                 });
-
-                legendHtml += `
-                    <div class="legenda-equipe">
-                        <span class="legenda-cor" style="background:${corEquipe};"></span>
-                        <span><b>${equipeSelecionada}</b> — ${dadosEquipe.length} pontos</span>
-                    </div>
-                `;
             });
-
-            legendDiv.innerHTML = legendHtml;
 
             if (todosLatLngs.length > 0) {
                 const bounds = L.latLngBounds(todosLatLngs);
@@ -509,25 +737,124 @@
             }
         }
 
-        btnToggleSelecao.addEventListener('click', () => {
-            togglePainel(painelSelecao, btnToggleSelecao);
+        btnToggleFiltros.addEventListener('click', () => {
+            togglePainel(painelFiltros, btnToggleFiltros);
         });
 
-        btnToggleInfo.addEventListener('click', () => {
-            togglePainel(infoEquipes, btnToggleInfo);
+        btnToggleResumo.addEventListener('click', () => {
+            if (!painelResumo.innerHTML.trim()) return;
+            togglePainel(painelResumo, btnToggleResumo);
         });
 
-        btnToggleLegend.addEventListener('click', () => {
-            if (!legendDiv.innerHTML.trim()) return;
-            togglePainel(legendDiv, btnToggleLegend);
+        btnToggleSelecionados.addEventListener('click', () => {
+            if (!painelSelecionados.innerHTML.trim()) return;
+            togglePainel(painelSelecionados, btnToggleSelecionados);
         });
 
-        searchEquipe.addEventListener('input', () => {
-            const filtro = searchEquipe.value.toLowerCase();
+        btnSelecaoPoligono.addEventListener('click', () => {
+            new L.Draw.Polygon(map, drawControl.options.draw.polygon).enable();
+        });
 
-            for (let option of selectEquipe.options) {
-                const texto = option.text.toLowerCase();
-                option.style.display = texto.includes(filtro) ? 'block' : 'none';
+        btnLimparSelecaoMapa.addEventListener('click', () => {
+            drawnItems.clearLayers();
+            limparSelecaoMapa();
+        });
+
+        btnCopiarNumos.addEventListener('click', async () => {
+            const lista = Array.from(numosSelecionados);
+
+            if (lista.length === 0) {
+                alert('Nenhuma OS foi selecionada no mapa.');
+                return;
+            }
+
+            const texto = lista.map(os => `${os}`).join(',');
+
+            try {
+                await navigator.clipboard.writeText(texto);
+                alert(`${lista.length} OS copiada(s) para a área de transferência.`);
+            } catch (e) {
+                prompt('Copie manualmente as OS abaixo:', texto);
+            }
+        });
+
+        selectRegional.addEventListener('change', () => {
+            const codservAntes = new Set(getCodservSelecionados());
+            const bairrosAntes = new Set(getBairrosSelecionados());
+
+            atualizarListaCodservs();
+
+            Array.from(selectCodserv.options).forEach(opt => {
+                if (codservAntes.has(opt.value)) opt.selected = true;
+            });
+
+            atualizarListaBairros();
+
+            Array.from(selectBairro.options).forEach(opt => {
+                if (bairrosAntes.has(opt.value)) opt.selected = true;
+            });
+
+            desenharMapa(getBairrosSelecionados());
+        });
+
+        selectCodserv.addEventListener('change', () => {
+            const bairrosAntes = new Set(getBairrosSelecionados());
+
+            atualizarListaBairros();
+
+            Array.from(selectBairro.options).forEach(opt => {
+                if (bairrosAntes.has(opt.value)) opt.selected = true;
+            });
+
+            desenharMapa(getBairrosSelecionados());
+        });
+
+        searchCodserv.addEventListener('input', () => {
+            const filtro = searchCodserv.value.toLowerCase();
+            for (const option of selectCodserv.options) {
+                option.style.display = option.text.toLowerCase().includes(filtro) ? 'block' : 'none';
+            }
+        });
+
+        searchBairro.addEventListener('input', () => {
+            const filtro = searchBairro.value.toLowerCase();
+            for (const option of selectBairro.options) {
+                option.style.display = option.text.toLowerCase().includes(filtro) ? 'block' : 'none';
+            }
+        });
+
+        selectBairro.addEventListener('change', () => {
+            desenharMapa(getBairrosSelecionados());
+        });
+
+        btnLimpar.addEventListener('click', () => {
+            selectRegional.value = '';
+            searchCodserv.value = '';
+            searchBairro.value = '';
+
+            Array.from(selectCodserv.options).forEach(opt => {
+                opt.selected = false;
+                opt.style.display = 'block';
+            });
+
+            atualizarListaCodservs();
+            atualizarListaBairros();
+
+            Array.from(selectBairro.options).forEach(opt => {
+                opt.selected = false;
+                opt.style.display = 'block';
+            });
+
+            layersGroup.clearLayers();
+            renderedPoints = [];
+            drawnItems.clearLayers();
+            limparSelecaoMapa();
+            painelSelecionados.innerHTML = '';
+            fecharPainel(painelSelecionados, btnToggleSelecionados);
+
+            if (dadosOriginais.length > 0) {
+                const coords = dadosOriginais.map(r => [r.lat, r.lon]);
+                map.fitBounds(L.latLngBounds(coords), { padding: [40, 40] });
             }
         });
 
@@ -546,76 +873,49 @@
 
                 dadosOriginais = jsonData
                     .map(r => ({
-                        equipe: String(r['NOME_EQUIPE'] || '').trim(),
-                        cdc: String(r['NUMCDC_VINCULADO'] || '').trim(),
-                        bairro: String(r['BAIRRO'] || '').trim(),
-                        tipo: String(r['TIPO'] || '').trim(),
-                        regional: String(r['REGIONAL'] || '').trim(),
-                        livro_local_rota: String(r['Livro_local_rota'] || '').trim(),
-                        livro: r['LIVRO'],
-                        lat: parseFloat(r['LAT']),
-                        lon: parseFloat(r['LONG']),
-                        valor_esperado: r['valor_esperado'],
-                        valor_total_devido: r['valor_total_devido'],
-                        rural_urban: String(r['RURAL_OR_URBAN'] || '').trim()
+                        codreg: normalizarTexto(r['codreg']),
+                        bairro: normalizarTexto(r['bairro'] || r['BAIRRO']),
+                        lat: parseCoord(r['LAT']),
+                        lon: parseCoord(r['LONG']),
+                        numos: r['numos'],
+                        codserv: normalizarTexto(r['codserv']),
+                        dscsvc: normalizarTexto(r['dscsvc']), // ✅ NOVO
+                        num_cdc: r['num_cdc'],
+                        num_transformador: r['num_transformador'],
+                        eqp: r['eqp'],
+                        tipserv: r['tipserv']
                     }))
                     .filter(r =>
-                        r.equipe !== '' &&
+                        r.bairro !== '' &&
                         !isNaN(r.lat) &&
                         !isNaN(r.lon)
                     );
 
                 if (dadosOriginais.length === 0) {
-                    alert('Nenhum dado válido foi encontrado no Excel.');
+                    alert('Nenhum dado válido com LAT/LONG foi encontrado no arquivo.');
                     return;
                 }
 
-                gerarMapaCoresEquipes();
-                popularSelectEquipes();
+                selectRegional.value = '';
+                searchCodserv.value = '';
+                searchBairro.value = '';
+                painelSelecionados.innerHTML = '';
+                fecharPainel(painelSelecionados, btnToggleSelecionados);
+                fecharPainel(painelResumo, btnToggleResumo);
+
+                atualizarListaCodservs();
+                atualizarListaBairros();
 
                 layersGroup.clearLayers();
-                searchEquipe.value = '';
-                legendDiv.innerHTML = '';
+                renderedPoints = [];
+                drawnItems.clearLayers();
+                limparSelecaoMapa();
 
-                Array.from(selectEquipe.options).forEach(opt => {
-                    opt.style.display = 'block';
-                    opt.selected = false;
-                });
-
-                fecharPainel(infoEquipes, btnToggleInfo);
-                fecharPainel(legendDiv, btnToggleLegend);
-
-                const bounds = L.latLngBounds(
-                    dadosOriginais.map(r => [r.lat, r.lon])
-                );
-                map.fitBounds(bounds, { padding: [40, 40] });
+                const coords = dadosOriginais.map(r => [r.lat, r.lon]);
+                map.fitBounds(L.latLngBounds(coords), { padding: [40, 40] });
             };
 
             reader.readAsArrayBuffer(file);
-        });
-
-        selectEquipe.addEventListener('change', () => {
-            desenharMapa(getEquipesSelecionadas());
-        });
-
-        btnLimpar.addEventListener('click', () => {
-            Array.from(selectEquipe.options).forEach(opt => opt.selected = false);
-            searchEquipe.value = '';
-            layersGroup.clearLayers();
-            legendDiv.innerHTML = '';
-
-            for (let option of selectEquipe.options) {
-                option.style.display = 'block';
-            }
-
-            fecharPainel(legendDiv, btnToggleLegend);
-
-            if (dadosOriginais.length > 0) {
-                const bounds = L.latLngBounds(
-                    dadosOriginais.map(r => [r.lat, r.lon])
-                );
-                map.fitBounds(bounds, { padding: [40, 40] });
-            }
         });
 
         initMap();
