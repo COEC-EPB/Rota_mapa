@@ -257,6 +257,11 @@
             <label for="select-codserv"><strong>Códigos de serviço</strong></label>
             <select id="select-codserv" size="6" multiple></select>
             <div class="dica">Segure Ctrl para selecionar vários códigos</div>
+
+            <div class="painel-acoes">
+                <button type="button" id="btn-todos-codserv">Selecionar todos os codserv</button>
+                <button type="button" id="btn-limpar-codserv">Limpar codserv</button>
+            </div>
         </div>
 
         <div class="bloco-filtro">
@@ -266,10 +271,15 @@
             <label for="select-bairro"><strong>Bairros</strong></label>
             <select id="select-bairro" size="8" multiple></select>
             <div class="dica">Segure Ctrl para selecionar vários bairros</div>
+
+            <div class="painel-acoes">
+                <button type="button" id="btn-todos-bairros">Selecionar todos os bairros</button>
+                <button type="button" id="btn-limpar-bairros">Limpar bairros</button>
+            </div>
         </div>
 
         <div class="painel-acoes">
-            <button id="btn-limpar">Limpar seleção</button>
+            <button id="btn-limpar">Limpar tudo</button>
         </div>
     </div>
 
@@ -295,7 +305,12 @@
         const searchCodserv = document.getElementById('searchCodserv');
         const selectBairro = document.getElementById('select-bairro');
         const selectCodserv = document.getElementById('select-codserv');
+
         const btnLimpar = document.getElementById('btn-limpar');
+        const btnTodosCodserv = document.getElementById('btn-todos-codserv');
+        const btnLimparCodserv = document.getElementById('btn-limpar-codserv');
+        const btnTodosBairros = document.getElementById('btn-todos-bairros');
+        const btnLimparBairros = document.getElementById('btn-limpar-bairros');
 
         const btnToggleFiltros = document.getElementById('btn-toggle-filtros');
         const btnToggleResumo = document.getElementById('btn-toggle-resumo');
@@ -501,45 +516,45 @@
         }
 
         function atualizarListaCodservs() {
-    const filtroRegional = selectRegional.value;
+            const filtroRegional = selectRegional.value;
 
-    dadosFiltradosRegional = dadosOriginais.filter(r => {
-        if (!filtroRegional) return true;
-        return String(r.codreg) === filtroRegional;
-    });
+            dadosFiltradosRegional = dadosOriginais.filter(r => {
+                if (!filtroRegional) return true;
+                return String(r.codreg) === filtroRegional;
+            });
 
-    const mapa = {};
+            const mapa = {};
 
-    dadosFiltradosRegional.forEach(r => {
-        const cod = normalizarTexto(r.codserv);
-        if (!cod) return;
+            dadosFiltradosRegional.forEach(r => {
+                const cod = normalizarTexto(r.codserv);
+                if (!cod) return;
 
-        if (!mapa[cod]) {
-            mapa[cod] = {
-                descricao: r.dscsvc || '',
-                qtd: 0
-            };
+                if (!mapa[cod]) {
+                    mapa[cod] = {
+                        descricao: r.dscsvc || '',
+                        qtd: 0
+                    };
+                }
+
+                mapa[cod].qtd++;
+            });
+
+            const codservs = Object.keys(mapa).sort((a, b) =>
+                a.localeCompare(b, 'pt-BR', { numeric: true })
+            );
+
+            selectCodserv.innerHTML = '';
+
+            codservs.forEach(cod => {
+                const opt = document.createElement('option');
+                const desc = mapa[cod].descricao || 'Sem descrição';
+
+                opt.value = cod;
+                opt.textContent = `${cod} - ${desc} (${mapa[cod].qtd})`;
+
+                selectCodserv.appendChild(opt);
+            });
         }
-
-        mapa[cod].qtd++;
-    });
-
-    const codservs = Object.keys(mapa).sort((a, b) =>
-        a.localeCompare(b, 'pt-BR', { numeric: true })
-    );
-
-    selectCodserv.innerHTML = '';
-
-    codservs.forEach(cod => {
-        const opt = document.createElement('option');
-        const desc = mapa[cod].descricao || 'Sem descrição';
-
-        opt.value = cod;
-        opt.textContent = `${cod} - ${desc} (${mapa[cod].qtd})`;
-
-        selectCodserv.appendChild(opt);
-    });
-}
 
         function atualizarListaBairros() {
             const codservSelecionados = getCodservSelecionados();
@@ -737,6 +752,20 @@
             }
         }
 
+        function selecionarTodosVisiveis(selectElement) {
+            Array.from(selectElement.options).forEach(opt => {
+                if (opt.style.display !== 'none') {
+                    opt.selected = true;
+                }
+            });
+        }
+
+        function limparTodos(selectElement) {
+            Array.from(selectElement.options).forEach(opt => {
+                opt.selected = false;
+            });
+        }
+
         btnToggleFiltros.addEventListener('click', () => {
             togglePainel(painelFiltros, btnToggleFiltros);
         });
@@ -768,7 +797,7 @@
                 return;
             }
 
-            const texto = lista.map(os => `${os}`).join(',');
+            const texto = lista.map(os => `"${os}"`).join(',');
 
             try {
                 await navigator.clipboard.writeText(texto);
@@ -776,6 +805,28 @@
             } catch (e) {
                 prompt('Copie manualmente as OS abaixo:', texto);
             }
+        });
+
+        btnTodosCodserv.addEventListener('click', () => {
+            selecionarTodosVisiveis(selectCodserv);
+            atualizarListaBairros();
+            desenharMapa(getBairrosSelecionados());
+        });
+
+        btnLimparCodserv.addEventListener('click', () => {
+            limparTodos(selectCodserv);
+            atualizarListaBairros();
+            desenharMapa(getBairrosSelecionados());
+        });
+
+        btnTodosBairros.addEventListener('click', () => {
+            selecionarTodosVisiveis(selectBairro);
+            desenharMapa(getBairrosSelecionados());
+        });
+
+        btnLimparBairros.addEventListener('click', () => {
+            limparTodos(selectBairro);
+            desenharMapa(getBairrosSelecionados());
         });
 
         selectRegional.addEventListener('change', () => {
@@ -879,7 +930,7 @@
                         lon: parseCoord(r['LONG']),
                         numos: r['numos'],
                         codserv: normalizarTexto(r['codserv']),
-                        dscsvc: normalizarTexto(r['dscsvc']), // ✅ NOVO
+                        dscsvc: normalizarTexto(r['dscsvc']),
                         num_cdc: r['num_cdc'],
                         num_transformador: r['num_transformador'],
                         eqp: r['eqp'],
