@@ -129,18 +129,18 @@
             background: #0f4fb8;
         }
 
-        #searchBairro, #searchCodserv {
+        #searchBairro, #searchCodserv, #searchStatus {
             width: 100%;
             box-sizing: border-box;
             margin-bottom: 8px;
         }
 
-        #select-bairro, #select-regional, #select-codserv {
+        #select-bairro, #select-regional, #select-codserv, #select-status {
             width: 100%;
             box-sizing: border-box;
         }
 
-        #select-bairro, #select-codserv {
+        #select-bairro, #select-codserv, #select-status {
             margin-top: 8px;
         }
 
@@ -251,6 +251,20 @@
         </div>
 
         <div class="bloco-filtro">
+            <label for="searchStatus"><strong>Pesquisar status</strong></label>
+            <input type="text" id="searchStatus" placeholder="Digite para filtrar status..." />
+
+            <label for="select-status"><strong>Status</strong></label>
+            <select id="select-status" size="5" multiple></select>
+            <div class="dica">Segure Ctrl para selecionar vários status</div>
+
+            <div class="painel-acoes">
+                <button type="button" id="btn-todos-status">Selecionar todos os status</button>
+                <button type="button" id="btn-limpar-status">Limpar status</button>
+            </div>
+        </div>
+
+        <div class="bloco-filtro">
             <label for="searchCodserv"><strong>Pesquisar codserv</strong></label>
             <input type="text" id="searchCodserv" placeholder="Digite para filtrar códigos..." />
 
@@ -301,12 +315,16 @@
     <script>
         const input = document.getElementById('input-excel');
         const selectRegional = document.getElementById('select-regional');
+        const searchStatus = document.getElementById('searchStatus');
         const searchBairro = document.getElementById('searchBairro');
         const searchCodserv = document.getElementById('searchCodserv');
+        const selectStatus = document.getElementById('select-status');
         const selectBairro = document.getElementById('select-bairro');
         const selectCodserv = document.getElementById('select-codserv');
 
         const btnLimpar = document.getElementById('btn-limpar');
+        const btnTodosStatus = document.getElementById('btn-todos-status');
+        const btnLimparStatus = document.getElementById('btn-limpar-status');
         const btnTodosCodserv = document.getElementById('btn-todos-codserv');
         const btnLimparCodserv = document.getElementById('btn-limpar-codserv');
         const btnTodosBairros = document.getElementById('btn-todos-bairros');
@@ -327,6 +345,7 @@
         let map, layersGroup;
         let dadosOriginais = [];
         let dadosFiltradosRegional = [];
+        let dadosFiltradosStatus = [];
         let dadosFiltradosCodserv = [];
         let mapaCoresBairros = {};
         let renderedPoints = [];
@@ -450,6 +469,7 @@
             return `
                 <b>NUMERO DA OS:</b> ${formatarValor(ponto.numos)}<br>
                 <b>CODIGO DO SERVIÇO:</b> ${formatarValor(ponto.codserv)}<br>
+                <b>STATUS:</b> ${formatarValor(ponto.status)}<br>
                 <b>CDC:</b> ${formatarValor(ponto.num_cdc)}<br>
                 <b>Transformador:</b> ${formatarValor(ponto.num_transformador)}<br>
                 <b>EQUIPE:</b> ${formatarValor(ponto.eqp)}<br>
@@ -507,6 +527,10 @@
             `;
         }
 
+        function getStatusSelecionados() {
+            return Array.from(selectStatus.selectedOptions).map(opt => opt.value);
+        }
+
         function getCodservSelecionados() {
             return Array.from(selectCodserv.selectedOptions).map(opt => opt.value);
         }
@@ -515,7 +539,7 @@
             return Array.from(selectBairro.selectedOptions).map(opt => opt.value);
         }
 
-        function atualizarListaCodservs() {
+        function atualizarListaStatus() {
             const filtroRegional = selectRegional.value;
 
             dadosFiltradosRegional = dadosOriginais.filter(r => {
@@ -523,9 +547,38 @@
                 return String(r.codreg) === filtroRegional;
             });
 
-            const mapa = {};
+            const contagem = {};
 
             dadosFiltradosRegional.forEach(r => {
+                const status = normalizarTexto(r.status);
+                if (!status) return;
+                if (!contagem[status]) contagem[status] = 0;
+                contagem[status]++;
+            });
+
+            const listaStatus = Object.keys(contagem).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+            selectStatus.innerHTML = '';
+
+            listaStatus.forEach(status => {
+                const opt = document.createElement('option');
+                opt.value = status;
+                opt.textContent = `${status} (${contagem[status]})`;
+                selectStatus.appendChild(opt);
+            });
+        }
+
+        function atualizarListaCodservs() {
+            const statusSelecionados = getStatusSelecionados();
+
+            dadosFiltradosStatus = dadosFiltradosRegional.filter(r => {
+                if (!statusSelecionados.length) return true;
+                return statusSelecionados.includes(normalizarTexto(r.status));
+            });
+
+            const mapa = {};
+
+            dadosFiltradosStatus.forEach(r => {
                 const cod = normalizarTexto(r.codserv);
                 if (!cod) return;
 
@@ -559,7 +612,7 @@
         function atualizarListaBairros() {
             const codservSelecionados = getCodservSelecionados();
 
-            dadosFiltradosCodserv = dadosFiltradosRegional.filter(r => {
+            dadosFiltradosCodserv = dadosFiltradosStatus.filter(r => {
                 if (!codservSelecionados.length) return true;
                 return codservSelecionados.includes(normalizarTexto(r.codserv));
             });
@@ -807,6 +860,20 @@
             }
         });
 
+        btnTodosStatus.addEventListener('click', () => {
+            selecionarTodosVisiveis(selectStatus);
+            atualizarListaCodservs();
+            atualizarListaBairros();
+            desenharMapa(getBairrosSelecionados());
+        });
+
+        btnLimparStatus.addEventListener('click', () => {
+            limparTodos(selectStatus);
+            atualizarListaCodservs();
+            atualizarListaBairros();
+            desenharMapa(getBairrosSelecionados());
+        });
+
         btnTodosCodserv.addEventListener('click', () => {
             selecionarTodosVisiveis(selectCodserv);
             atualizarListaBairros();
@@ -830,6 +897,32 @@
         });
 
         selectRegional.addEventListener('change', () => {
+            const statusAntes = new Set(getStatusSelecionados());
+            const codservAntes = new Set(getCodservSelecionados());
+            const bairrosAntes = new Set(getBairrosSelecionados());
+
+            atualizarListaStatus();
+
+            Array.from(selectStatus.options).forEach(opt => {
+                if (statusAntes.has(opt.value)) opt.selected = true;
+            });
+
+            atualizarListaCodservs();
+
+            Array.from(selectCodserv.options).forEach(opt => {
+                if (codservAntes.has(opt.value)) opt.selected = true;
+            });
+
+            atualizarListaBairros();
+
+            Array.from(selectBairro.options).forEach(opt => {
+                if (bairrosAntes.has(opt.value)) opt.selected = true;
+            });
+
+            desenharMapa(getBairrosSelecionados());
+        });
+
+        selectStatus.addEventListener('change', () => {
             const codservAntes = new Set(getCodservSelecionados());
             const bairrosAntes = new Set(getBairrosSelecionados());
 
@@ -860,6 +953,13 @@
             desenharMapa(getBairrosSelecionados());
         });
 
+        searchStatus.addEventListener('input', () => {
+            const filtro = searchStatus.value.toLowerCase();
+            for (const option of selectStatus.options) {
+                option.style.display = option.text.toLowerCase().includes(filtro) ? 'block' : 'none';
+            }
+        });
+
         searchCodserv.addEventListener('input', () => {
             const filtro = searchCodserv.value.toLowerCase();
             for (const option of selectCodserv.options) {
@@ -880,8 +980,16 @@
 
         btnLimpar.addEventListener('click', () => {
             selectRegional.value = '';
+            searchStatus.value = '';
             searchCodserv.value = '';
             searchBairro.value = '';
+
+            Array.from(selectStatus.options).forEach(opt => {
+                opt.selected = false;
+                opt.style.display = 'block';
+            });
+
+            atualizarListaStatus();
 
             Array.from(selectCodserv.options).forEach(opt => {
                 opt.selected = false;
@@ -931,6 +1039,7 @@
                         numos: r['numos'],
                         codserv: normalizarTexto(r['codserv']),
                         dscsvc: normalizarTexto(r['dscsvc']),
+                        status: normalizarTexto(r['status']),
                         num_cdc: r['num_cdc'],
                         num_transformador: r['num_transformador'],
                         eqp: r['eqp'],
@@ -948,12 +1057,14 @@
                 }
 
                 selectRegional.value = '';
+                searchStatus.value = '';
                 searchCodserv.value = '';
                 searchBairro.value = '';
                 painelSelecionados.innerHTML = '';
                 fecharPainel(painelSelecionados, btnToggleSelecionados);
                 fecharPainel(painelResumo, btnToggleResumo);
 
+                atualizarListaStatus();
                 atualizarListaCodservs();
                 atualizarListaBairros();
 
