@@ -850,7 +850,7 @@
                 return;
             }
 
-            const texto = lista.map(join('numos in (')(os => `${os}`).join(',').join(')'));
+            const texto = `numos in (${lista.join(',')})`;
 
             try {
                 await navigator.clipboard.writeText(texto);
