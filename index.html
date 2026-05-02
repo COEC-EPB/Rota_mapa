@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
-body { margin:0; font-family:Arial; background:#0f172a; color:white; }
+body { margin:0; font-family:Arial; background:#0b1220; color:white; }
 
 #login { height:100vh; display:flex; justify-content:center; align-items:center; }
 
@@ -20,21 +20,22 @@ input, button, select {
   width:100%; margin-top:10px; padding:10px; border-radius:8px; border:none;
 }
 
-button { background:#22c55e; color:white; cursor:pointer; }
+button { background:#22c55e; color:white; cursor:pointer; font-weight:bold; }
 
 #app { display:none; }
 
 #admin { padding:10px; background:#020617; }
 
-#layout { display:flex; }
+#layout { display:flex; height:100vh; }
 
 #filtros {
-  width:220px;
+  width:260px;
   background:#020617;
-  padding:10px;
+  padding:20px;
+  border-right:1px solid #1e293b;
 }
 
-#map { flex:1; height:calc(100vh - 200px); }
+#map { flex:1; }
 
 #status { margin-top:10px; padding:8px; border-radius:6px; }
 
@@ -88,10 +89,8 @@ button { background:#22c55e; color:white; cursor:pointer; }
 
 <div id="layout">
 
-  <!-- FILTROS -->
-
   <div id="filtros">
-    <h4>Filtros</h4>
+    <h4>📊 Filtros</h4>
 
 ```
 <label>Tipo</label>
@@ -109,6 +108,8 @@ button { background:#22c55e; color:white; cursor:pointer; }
   <option value="MEDIA">Média</option>
   <option value="BAIXA">Baixa</option>
 </select>
+
+<div id="contador"></div>
 ```
 
   </div>
@@ -129,7 +130,6 @@ function login() {
   if (userVal === "admin" && senhaVal === "123456") {
     document.getElementById("login").style.display = "none";
     document.getElementById("app").style.display = "block";
-
     initMap();
     carregar();
   } else {
@@ -151,7 +151,6 @@ function initMap() {
 
   layer = L.layerGroup().addTo(map);
 
-  // LEGENDA
   const legenda = L.control({ position: "bottomright" });
 
   legenda.onAdd = function () {
@@ -199,8 +198,14 @@ async function carregar() {
     return true;
   });
 
+  document.getElementById("contador").innerText = "Total: " + dados.length;
+
+  const bounds = [];
+
   dados.forEach(p => {
-    if (!p.lat || !p.lon) return;
+    if (isNaN(p.lat) || isNaN(p.lon)) return;
+
+    bounds.push([p.lat, p.lon]);
 
     L.circleMarker([p.lat, p.lon], {
       radius: 8,
@@ -220,6 +225,8 @@ async function carregar() {
     `)
     .addTo(layer);
   });
+
+  if (bounds.length) map.fitBounds(bounds);
 }
 
 async function processar() {
@@ -236,23 +243,19 @@ async function processar() {
   status.innerText = "⏳ Processando...";
   status.className = "processando";
   progressContainer.style.display = "block";
-  atualizarBarra(5);
 
   try {
     const wb1 = XLSX.read(await f1.arrayBuffer());
     const data1 = XLSX.utils.sheet_to_json(wb1.Sheets[wb1.SheetNames[0]]);
-    atualizarBarra(20);
 
     const wb2 = XLSX.read(await f2.arrayBuffer());
     const data2 = XLSX.utils.sheet_to_json(wb2.Sheets[wb2.SheetNames[0]]);
-    atualizarBarra(40);
 
     let dados = [...data1, ...data2];
 
     dados = dados.filter(r =>
       r.Status === "CRIADA" || r.Status === "A REPROGRAMAR"
     );
-    atualizarBarra(60);
 
     dados = dados.map(r => ({
       os: r["OS Manutencao"] || r["OS Manutenção"] || "",
@@ -261,14 +264,13 @@ async function processar() {
       base: r["Base Operacao"] || "",
       qtd_clientes: r["Qtd Clientes Cadastrados"] || 0,
       alimentador: r["Nome do Alimentador"] || "",
-      lat: parseFloat(String(r["Latitude"] || "0").replace(",", ".")),
-      lon: parseFloat(String(r["Longitude"] || "0").replace(",", ".")),
+      lat: parseFloat(String(r["Latitude"]).replace(",", ".")),
+      lon: parseFloat(String(r["Longitude"]).replace(",", ".")),
       trecho: r["Trecho"] || "",
       tag: r["Tag Ativo"] || "",
       criticidade: r["Criticidade"] || "",
       tipo: r["Tipo Manutencao"] || ""
     }));
-    atualizarBarra(80);
 
     const chunkSize = 300;
 
@@ -301,7 +303,6 @@ async function processar() {
     console.error(e);
     status.innerText = "❌ Erro no processamento";
     status.className = "erro";
-    atualizarBarra(0);
   }
 }
 </script>
