@@ -1,16 +1,8 @@
 from flask import Flask, request, jsonify
 import pandas as pd
-import psycopg2
-import os
 import requests
 
 app = Flask(__name__)
-
-# 🔌 CONEXÃO DATABASE (Railway)
-conn = psycopg2.connect(
-    os.environ.get("DATABASE_URL")
-)
-cursor = conn.cursor()
 
 
 # 🧠 PROCESSAMENTO
@@ -69,32 +61,39 @@ def upload():
     file1 = request.files.get("file1")
     file2 = request.files.get("file2")
 
+    if not file1 or not file2:
+        return jsonify({"erro": "Envie os dois arquivos"}), 400
+
     dados = processar_arquivos(file1, file2)
 
-    # envia pro Cloudflare Worker
-    requests.post(
-        "https://despacholinhaviva.pedro-fillype.workers.dev/salvar",
-        json=dados
-    )
+    try:
+        response = requests.post(
+            "https://despacholinhaviva.pedro-fillype.workers.dev/salvar",
+            json=dados
+        )
+
+        if response.status_code != 200:
+            return jsonify({
+                "erro": "Erro ao enviar para o Worker",
+                "detalhe": response.text
+            }), 500
+
+    except Exception as e:
+        return jsonify({
+            "erro": "Falha na comunicação com Worker",
+            "detalhe": str(e)
+        }), 500
 
     return jsonify({
         "ok": True,
         "total": len(dados)
     })
 
-# 📊 DADOS PARA O MAPA
-@app.route("/dados", methods=["GET"])
-def dados():
-    cursor.execute("SELECT * FROM servicos")
-    rows = cursor.fetchall()
 
-    colnames = [desc[0] for desc in cursor.description]
-
-    result = []
-    for row in rows:
-        result.append(dict(zip(colnames, row)))
-
-    return jsonify(result)
+# 🚀 HEALTH CHECK (IMPORTANTE PRA RAILWAY)
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"status": "ok"})
 
 
 # 🚀 START
