@@ -69,6 +69,18 @@ button { background:#22c55e; color:white; cursor:pointer; }
     <input type="file" id="file1">
     <input type="file" id="file2">
     <button onclick="processar()">Processar</button>
+    <div id="progressContainer" style="margin-top:10px; display:none;">
+  <div style="background:#1e293b; border-radius:8px; overflow:hidden;">
+    <div id="progressBar" style="
+      width:0%;
+      height:20px;
+      background:#22c55e;
+      text-align:center;
+      color:white;
+      font-size:12px;
+    ">0%</div>
+  </div>
+</div>
     <div id="status"></div>
   </div>
 
@@ -94,6 +106,11 @@ function login() {
   } else {
     alert("Login inválido");
   }
+}
+  function atualizarBarra(percent) {
+  const bar = document.getElementById("progressBar");
+  bar.style.width = percent + "%";
+  bar.innerText = percent + "%";
 }
 
 /* MAPA */
@@ -127,6 +144,7 @@ async function processar() {
   const f1 = file1.files[0];
   const f2 = file2.files[0];
   const status = document.getElementById("status");
+  const progressContainer = document.getElementById("progressContainer");
 
   if (!f1 || !f2) {
     alert("Envie os dois arquivos");
@@ -135,55 +153,66 @@ async function processar() {
 
   status.innerText = "⏳ Processando...";
   status.className = "processando";
+  progressContainer.style.display = "block";
+  atualizarBarra(5);
 
   try {
+    // 📄 LEITURA
     const wb1 = XLSX.read(await f1.arrayBuffer());
     const data1 = XLSX.utils.sheet_to_json(
       wb1.Sheets[wb1.SheetNames[0]]
     );
-    
+
+    atualizarBarra(20);
+
     const wb2 = XLSX.read(await f2.arrayBuffer());
     const data2 = XLSX.utils.sheet_to_json(
       wb2.Sheets[wb2.SheetNames[0]]
     );
 
-    console.log("LINHAS 1:", data1.length);
-    console.log("LINHAS 2:", data2.length);
-    console.log("COLUNAS:", Object.keys(data1[0]));
+    atualizarBarra(40);
 
     let dados = [...data1, ...data2];
 
-    dados = dados
-      .filter(r => r.Status === "CRIADA" || r.Status === "A REPROGRAMAR")
-      .map(r => ({
-        os: r["OS Manutencao"] || r["OS Manutenção"] || "",
-        status: r["Status"] || "",
-        data_criacao: r["Data Criacao"] || r["Data Criação"] || "",
-        base: r["Base Operacao"] || "",
-        qtd_clientes: r["Qtd Clientes Cadastrados"] || 0,
-        alimentador: r["Nome do Alimentador"] || "",
-        lat: parseFloat(String(r["Latitude"] || "0").replace(",", ".")),
-        lon: parseFloat(String(r["Longitude"] || "0").replace(",", ".")),
-        trecho: r["Trecho"] || "",
-        tag: r["Tag Ativo"] || "",
-        criticidade: r["Criticidade"] || "",
-        tipo: r["Tipo Manutencao"] || r["Tipo Manutenção"] || ""
-      }))
+    // 🔍 FILTRO
+    dados = dados.filter(r =>
+      r.Status === "CRIADA" || r.Status === "A REPROGRAMAR"
+    );
 
+    atualizarBarra(60);
+
+    // 🔄 TRANSFORMAÇÃO
+    dados = dados.map(r => ({
+      os: r["OS Manutencao"] || r["OS Manutenção"] || "",
+      status: r["Status"] || "",
+      data_criacao: r["Data Criacao"] || "",
+      base: r["Base Operacao"] || "",
+      qtd_clientes: r["Qtd Clientes Cadastrados"] || 0,
+      alimentador: r["Nome do Alimentador"] || "",
+      lat: parseFloat(String(r["Latitude"] || "0").replace(",", ".")),
+      lon: parseFloat(String(r["Longitude"] || "0").replace(",", ".")),
+      trecho: r["Trecho"] || "",
+      tag: r["Tag Ativo"] || "",
+      criticidade: r["Criticidade"] || "",
+      tipo: r["Tipo Manutencao"] || ""
+    }));
+
+    atualizarBarra(80);
+
+    // ☁️ ENVIO
     const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/salvar", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(dados)
-  });
-  
-  const text = await res.text();
-  console.log("RESPOSTA:", text);
-  
-  if (!res.ok) {
-    throw new Error("Erro ao salvar: " + text);
-  }
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dados)
+    });
 
-    status.innerText = "✅ Processamento completo";
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+
+    atualizarBarra(100);
+
+    status.innerText = `✅ Processamento completo (${dados.length} registros)`;
     status.className = "sucesso";
 
     carregar();
@@ -192,6 +221,7 @@ async function processar() {
     console.error(e);
     status.innerText = "❌ Erro no processamento";
     status.className = "erro";
+    atualizarBarra(0);
   }
 }
 </script>
