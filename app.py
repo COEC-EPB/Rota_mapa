@@ -4,7 +4,9 @@ import pandas as pd
 import requests
 
 app = Flask(__name__)
-CORS(app)
+
+# 🔥 LIBERA CORS TOTAL
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # 🔧 DIVIDIR EM PARTES
 def dividir(lista, tamanho):
