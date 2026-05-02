@@ -34,8 +34,8 @@ body { margin:0; font-family:Arial; background:#0b1220; color:white; }
   background:#020617;
   display:flex;
   align-items:center;
+  justify-content:space-between;
   padding:0 20px;
-  font-weight:bold;
 }
 
 /* LAYOUT */
@@ -49,7 +49,21 @@ body { margin:0; font-family:Arial; background:#0b1220; color:white; }
   width:300px;
   background:#020617;
   padding:20px;
+  transition:0.3s;
   overflow:auto;
+}
+#sidebar.collapsed {
+  width:60px;
+  padding:10px;
+}
+
+/* BOTÃO TOGGLE */
+#toggle {
+  background:#1e293b;
+  border:none;
+  padding:8px;
+  cursor:pointer;
+  width:100%;
 }
 
 /* MAP */
@@ -59,7 +73,7 @@ body { margin:0; font-family:Arial; background:#0b1220; color:white; }
 input, select, button {
   width:100%;
   padding:10px;
-  margin-top:8px;
+  margin-top:10px;
   border-radius:8px;
   border:none;
   background:#1e293b;
@@ -69,8 +83,7 @@ input, select, button {
 button { background:#22c55e; cursor:pointer; }
 .logout { background:#ef4444; margin-top:20px; }
 
-.label { margin-top:10px; font-size:12px; color:#94a3b8; }
-
+/* PROGRESS */
 #progress { margin-top:10px; background:#111827; border-radius:8px; }
 #bar {
   height:20px;
@@ -79,6 +92,19 @@ button { background:#22c55e; cursor:pointer; }
   text-align:center;
   font-size:12px;
 }
+
+/* CLUSTER */
+.cluster div {
+  border-radius:50%;
+  color:white;
+  font-weight:bold;
+  text-align:center;
+  line-height:40px;
+}
+.cluster-small { background:#22c55e; }
+.cluster-medium { background:#facc15; }
+.cluster-large { background:#ef4444; }
+
 </style>
 
 </head>
@@ -100,11 +126,15 @@ button { background:#22c55e; cursor:pointer; }
 
 <div id="app">
 
-<div id="header">📍 Despacho LL</div>
+<div id="header">
+  <div>📍 Despacho LL</div>
+</div>
 
 <div id="layout">
 
 <div id="sidebar">
+
+<button id="toggle" onclick="toggleSidebar()">☰</button>
 
 <h3>📁 Upload</h3>
 <input type="file" id="file">
@@ -117,25 +147,18 @@ button { background:#22c55e; cursor:pointer; }
 
 <h3>📊 Filtros</h3>
 
-<div class="label">Buscar OS</div>
-<input id="busca" placeholder="Digite a OS..." oninput="carregar()">
+<input id="busca" placeholder="Buscar OS..." oninput="carregar()">
 
-<div class="label">Criticidade</div>
 <select id="crit" onchange="carregar()">
-  <option value="">Todas</option>
-  <option value="ALTA">Alta</option>
-  <option value="MEDIA">Média</option>
-  <option value="BAIXA">Baixa</option>
+<option value="">Criticidade</option>
+<option value="ALTA">Alta</option>
+<option value="MEDIA">Média</option>
+<option value="BAIXA">Baixa</option>
 </select>
 
-<div class="label">Tipo de Serviço</div>
-<select id="tipo" onchange="carregar()"></select>
-
-<div class="label">Trecho</div>
-<select id="trecho" onchange="carregar()"></select>
-
-<div class="label">Alimentador</div>
-<select id="alim" onchange="carregar()"></select>
+<select id="tipo" onchange="carregar()">Tipo de Serviço</select>
+<select id="trecho" onchange="carregar()">Trecho</select> 
+<select id="alim" onchange="carregar()">Alimentador</select>
 
 <div id="contador"></div>
 
@@ -156,22 +179,30 @@ button { background:#22c55e; cursor:pointer; }
 
 <script>
 let map, cluster;
-let coresTipo = {};
-let legendaControl = null;
-
-let paleta = ["#3b82f6","#22c55e","#facc15","#ef4444","#a855f7","#06b6d4","#f97316"];
 
 /* LOGIN */
 function login(){
-  if(user.value==="admin" && senha.value==="123456"){
-    document.getElementById("login").style.display="none";
-    document.getElementById("app").style.display="block";
+  const user = document.getElementById("user").value;
+  const senha = document.getElementById("senha").value;
+
+  if(user === "admin" && senha === "123456"){
+
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
+
     init();
     carregar();
-  } else alert("Login inválido");
-}
 
+  } else {
+    alert("Login inválido");
+  }
+}
 function logout(){ location.reload(); }
+
+/* SIDEBAR */
+function toggleSidebar(){
+  sidebar.classList.toggle("collapsed");
+}
 
 /* MAPA */
 function init(){
@@ -179,68 +210,43 @@ function init(){
 
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
 
+  // 🔥 CLUSTER INTELIGENTE
   cluster = L.markerClusterGroup({
-    maxClusterRadius: z => z < 8 ? 80 : z < 12 ? 50 : 20,
-    disableClusteringAtZoom: 14,
-    chunkedLoading: true
+    maxClusterRadius: zoom => zoom<8?80:zoom<12?50:20,
+    disableClusteringAtZoom:14,
+    spiderfyOnMaxZoom:true,
+    showCoverageOnHover:false,
+    chunkedLoading:true,
+
+    iconCreateFunction: function(c){
+      const count = c.getChildCount();
+      let size="small";
+      if(count>50) size="large";
+      else if(count>20) size="medium";
+
+      return L.divIcon({
+        html:`<div class="cluster-${size}">${count}</div>`,
+        className:"cluster",
+        iconSize:L.point(40,40)
+      });
+    }
   });
 
   map.addLayer(cluster);
 }
 
-/* COR POR TIPO */
-function corTipo(tipo){
-  if(!tipo) return "#94a3b8";
-  if(!coresTipo[tipo]){
-    coresTipo[tipo] = paleta[Object.keys(coresTipo).length % paleta.length];
-  }
-  return coresTipo[tipo];
-}
-
-/* LEGENDA */
-function atualizarLegenda(){
-
-  if (legendaControl) {
-    map.removeControl(legendaControl);
-  }
-
-  legendaControl = L.control({position:"bottomright"});
-
-  legendaControl.onAdd = function(){
-    const div = L.DomUtil.create("div");
-
-    div.style.background="#020617";
-    div.style.padding="10px";
-    div.style.borderRadius="8px";
-    div.style.maxHeight="180px";
-    div.style.overflowY="auto";
-    div.style.fontSize="12px";
-
-    let html="<b>Tipos de Serviço</b><br>";
-
-    Object.entries(coresTipo).forEach(([t,c])=>{
-      html+=`
-        <div style="margin-top:4px;">
-          <span style="
-            background:${c};
-            width:10px;
-            height:10px;
-            display:inline-block;
-            margin-right:6px
-          "></span>
-          ${t}
-        </div>`;
-    });
-
-    div.innerHTML=html;
-    return div;
-  };
-
-  legendaControl.addTo(map);
+/* CORES */
+function cor(c){
+  if(!c) return "#94a3b8";
+  c=c.toUpperCase();
+  if(c.includes("ALTA")) return "#ef4444";
+  if(c.includes("MEDIA")) return "#facc15";
+  if(c.includes("BAIXA")) return "#22c55e";
+  return "#3b82f6";
 }
 
 /* UPLOAD */
-function enviar(){
+async function enviar(){
   const file = document.getElementById("file").files[0];
   if(!file) return alert("Selecione arquivo");
 
@@ -262,17 +268,20 @@ function enviar(){
     };
 
     xhr.onload=()=>{ status.innerText="Upload OK"; carregar(); };
+
     xhr.send(csv);
   };
 
   reader.readAsArrayBuffer(file);
 }
 
-/* FILTROS */
+/* FILTROS DINÂMICOS */
 function preencher(id,set){
   const el=document.getElementById(id);
   el.innerHTML='<option value="">Todos</option>';
-  [...set].sort().forEach(v=> el.innerHTML+=`<option>${v}</option>`);
+  [...set].sort().forEach(v=>{
+    el.innerHTML+=`<option>${v}</option>`;
+  });
 }
 
 /* CARREGAR */
@@ -298,7 +307,6 @@ async function carregar(){
   preencher("trecho",setTrecho);
   preencher("alim",setAlim);
 
-  coresTipo = {};
   cluster.clearLayers();
 
   dados = dados.filter(p=>{
@@ -313,16 +321,11 @@ async function carregar(){
   contador.innerText="Total: "+dados.length;
 
   dados.forEach(p=>{
-    const marker = L.marker([p.lat, p.lon], {
-      icon: L.divIcon({
-        html: `<div style="
-          width:12px;
-          height:12px;
-          background:${corTipo(p.tipo)};
-          border-radius:50%;
-          border:2px solid white;
-        "></div>`
-      })
+    const marker = L.circleMarker([p.lat,p.lon],{
+      radius:8,
+      fillColor:cor(p.criticidade),
+      color:"#fff",
+      fillOpacity:0.9
     });
 
     marker.bindPopup(`
@@ -330,15 +333,13 @@ async function carregar(){
       <b>Status:</b> ${p.status}<br>
       <b>Tipo:</b> ${p.tipo}<br>
       <b>Trecho:</b> ${p.trecho}<br>
-      <b>Alimentador:</b> ${p.alimentador}<br>
-      <b>Criticidade:</b> ${p.criticidade}<br>
+      <b>Alimentador:</b> ${p.alimentador}
+      <b>Criticidade:</b> ${p.criticidade}
       <b>Tag:</b> ${p.tag}
     `);
 
     cluster.addLayer(marker);
   });
-
-  atualizarLegenda();
 }
 </script>
 
