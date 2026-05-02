@@ -3,7 +3,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Despacho LL</title>
+<title>Despacho LL PRO</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
@@ -116,24 +116,33 @@ async function carregar() {
 
   clusterGroup.clearLayers();
 
+  // 🔥 FILTRO COMPLETO (inclui validação de coordenadas)
   dados = dados.filter(p => {
+    const lat = parseFloat(p.lat);
+    const lon = parseFloat(p.lon);
+
+    if (isNaN(lat) || isNaN(lon)) return false;
+    if (lat === 0 || lon === 0) return false;
+
     if (tipo && !p.tipo?.toUpperCase().includes(tipo)) return false;
     if (crit && !p.criticidade?.toUpperCase().includes(crit)) return false;
     if (busca && !p.os?.toUpperCase().includes(busca)) return false;
+
     return true;
   });
 
   document.getElementById("contador").innerText =
-    "Total: " + dados.length + " registros";
+    "Total: " + dados.length + " registros válidos";
 
   const bounds = [];
 
   dados.forEach(p => {
-    if (isNaN(p.lat) || isNaN(p.lon)) return;
+    const lat = parseFloat(p.lat);
+    const lon = parseFloat(p.lon);
 
-    bounds.push([p.lat, p.lon]);
+    bounds.push([lat, lon]);
 
-    const marker = L.circleMarker([p.lat, p.lon], {
+    const marker = L.circleMarker([lat, lon], {
       radius: 8,
       fillColor: corPorCriticidade(p.criticidade),
       color: "#fff",
@@ -154,7 +163,9 @@ async function carregar() {
     clusterGroup.addLayer(marker);
   });
 
-  if (bounds.length) map.fitBounds(bounds);
+  if (bounds.length) {
+    map.fitBounds(bounds);
+  }
 }
 
 initMap();
