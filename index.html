@@ -64,20 +64,13 @@ input, select, button {
   border:none;
   background:#1e293b;
   color:white;
-  font-size:14px;
 }
 
-button { background:#22c55e; cursor:pointer; font-weight:bold; }
+button { background:#22c55e; cursor:pointer; }
 .logout { background:#ef4444; margin-top:20px; }
 
-/* LABEL */
-.label {
-  margin-top:12px;
-  font-size:12px;
-  color:#94a3b8;
-}
+.label { margin-top:10px; font-size:12px; color:#94a3b8; }
 
-/* PROGRESS */
 #progress { margin-top:10px; background:#111827; border-radius:8px; }
 #bar {
   height:20px;
@@ -86,19 +79,6 @@ button { background:#22c55e; cursor:pointer; font-weight:bold; }
   text-align:center;
   font-size:12px;
 }
-
-/* CLUSTER */
-.cluster div {
-  border-radius:50%;
-  color:white;
-  font-weight:bold;
-  text-align:center;
-  line-height:40px;
-}
-.cluster-small { background:#22c55e; }
-.cluster-medium { background:#facc15; }
-.cluster-large { background:#ef4444; }
-
 </style>
 
 </head>
@@ -177,6 +157,8 @@ button { background:#22c55e; cursor:pointer; font-weight:bold; }
 <script>
 let map, cluster;
 let coresTipo = {};
+let legendaControl = null;
+
 let paleta = ["#3b82f6","#22c55e","#facc15","#ef4444","#a855f7","#06b6d4","#f97316"];
 
 /* LOGIN */
@@ -188,42 +170,34 @@ function login(){
     carregar();
   } else alert("Login inválido");
 }
+
 function logout(){ location.reload(); }
 
-/* MAP */
+/* MAPA */
 function init(){
   map = L.map('map').setView([-7.12,-36.5],8);
 
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
 
   cluster = L.markerClusterGroup({
-  maxClusterRadius: z => z < 8 ? 80 : z < 12 ? 50 : 20,
-  disableClusteringAtZoom: 14,
-  chunkedLoading: true,
+    maxClusterRadius: z => z < 8 ? 80 : z < 12 ? 50 : 20,
+    disableClusteringAtZoom: 14,
+    chunkedLoading: true
+  });
 
-  iconCreateFunction: function (cluster) {
-    const count = cluster.getChildCount();
-
-    return L.divIcon({
-      html: `<div style="
-        background:#1e293b;
-        color:white;
-        border-radius:50%;
-        width:40px;
-        height:40px;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-weight:bold;
-      ">${count}</div>`,
-      className: "cluster",
-      iconSize: L.point(40, 40)
-    });
-  }
-});
-let legendaControl = null;
   map.addLayer(cluster);
 }
+
+/* COR POR TIPO */
+function corTipo(tipo){
+  if(!tipo) return "#94a3b8";
+  if(!coresTipo[tipo]){
+    coresTipo[tipo] = paleta[Object.keys(coresTipo).length % paleta.length];
+  }
+  return coresTipo[tipo];
+}
+
+/* LEGENDA */
 function atualizarLegenda(){
 
   if (legendaControl) {
@@ -238,10 +212,11 @@ function atualizarLegenda(){
     div.style.background="#020617";
     div.style.padding="10px";
     div.style.borderRadius="8px";
-    div.style.maxHeight="200px";
+    div.style.maxHeight="180px";
     div.style.overflowY="auto";
+    div.style.fontSize="12px";
 
-    let html="<b>Tipos</b><br>";
+    let html="<b>Tipos de Serviço</b><br>";
 
     Object.entries(coresTipo).forEach(([t,c])=>{
       html+=`
@@ -263,16 +238,7 @@ function atualizarLegenda(){
 
   legendaControl.addTo(map);
 }
-/* COR POR TIPO */
-function corTipo(tipo){
-  if(!tipo) return "#94a3b8";
-  if(!coresTipo[tipo]){
-    coresTipo[tipo] = paleta[Object.keys(coresTipo).length % paleta.length];
-  }
-  return coresTipo[tipo];
-}
 
-/* LEGENDA */
 /* UPLOAD */
 function enviar(){
   const file = document.getElementById("file").files[0];
@@ -348,17 +314,16 @@ async function carregar(){
 
   dados.forEach(p=>{
     const marker = L.marker([p.lat, p.lon], {
-  icon: L.divIcon({
-    className: "custom-marker",
-    html: `<div style="
-      width:12px;
-      height:12px;
-      background:${corTipo(p.tipo)};
-      border-radius:50%;
-      border:2px solid white;
-    "></div>`
-  })
-});
+      icon: L.divIcon({
+        html: `<div style="
+          width:12px;
+          height:12px;
+          background:${corTipo(p.tipo)};
+          border-radius:50%;
+          border:2px solid white;
+        "></div>`
+      })
+    });
 
     marker.bindPopup(`
       <b>OS:</b> ${p.os}<br>
@@ -372,6 +337,7 @@ async function carregar(){
 
     cluster.addLayer(marker);
   });
+
   atualizarLegenda();
 }
 </script>
