@@ -123,12 +123,18 @@ button { background:#22c55e; color:white; cursor:pointer; }
 let map, layer;
 
 function login() {
-  if (user.value === "admin" && senha.value === "123456") {
-    login.style.display = "none";
-    app.style.display = "block";
+  const userVal = document.getElementById("user").value;
+  const senhaVal = document.getElementById("senha").value;
+
+  if (userVal === "admin" && senhaVal === "123456") {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
+
     initMap();
     carregar();
-  } else alert("Login inválido");
+  } else {
+    alert("Login inválido");
+  }
 }
 
 function atualizarBarra(percent) {
