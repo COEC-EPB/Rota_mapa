@@ -273,27 +273,6 @@ function corTipo(tipo){
 }
 
 /* LEGENDA */
-function legenda(){
-  const l = L.control({position:"bottomright"});
-
-  l.onAdd=function(){
-    const div = L.DomUtil.create("div");
-    div.style.background="#020617";
-    div.style.padding="10px";
-    div.style.borderRadius="8px";
-
-    let html="<b>Tipos</b><br>";
-    Object.entries(coresTipo).forEach(([t,c])=>{
-      html+=`<div><span style="background:${c};width:10px;height:10px;display:inline-block;margin-right:5px"></span>${t}</div>`;
-    });
-
-    div.innerHTML=html;
-    return div;
-  };
-
-  l.addTo(map);
-}
-
 /* UPLOAD */
 function enviar(){
   const file = document.getElementById("file").files[0];
@@ -393,7 +372,6 @@ async function carregar(){
 
     cluster.addLayer(marker);
   });
-  legenda();
   atualizarLegenda();
 }
 </script>
