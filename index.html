@@ -156,7 +156,9 @@ button { background:#22c55e; cursor:pointer; }
 <option value="BAIXA">Baixa</option>
 </select>
 
-<select id="tipo" onchange="carregar()"></select> <select id="trecho" onchange="carregar()"></select> <select id="alim" onchange="carregar()"></select>
+<select id="tipo" onchange="carregar()">Tipo de Serviço</select>
+<select id="trecho" onchange="carregar()">Trecho</select> 
+<select id="alim" onchange="carregar()">Alimentador</select>
 
 <div id="contador"></div>
 
@@ -332,6 +334,8 @@ async function carregar(){
       <b>Tipo:</b> ${p.tipo}<br>
       <b>Trecho:</b> ${p.trecho}<br>
       <b>Alimentador:</b> ${p.alimentador}
+      <b>Criticidade:</b> ${p.criticidade}
+      <b>Tag:</b> ${p.tag}
     `);
 
     cluster.addLayer(marker);
