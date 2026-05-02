@@ -1,133 +1,189 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<title>Mapa de Serviços</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8">
+<title>Sistema de Despacho</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
 
 <style>
 body {
   margin: 0;
   font-family: Arial;
-  background: #f5f5f5;
-}
-#topo {
-  padding: 10px;
-  background: white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
-#map {
-  height: calc(100vh - 60px);
-}
-.btn {
-  background: #1a73e8;
+  background: #0f172a;
   color: white;
-  padding: 8px 12px;
+}
+
+/* LOGIN */
+#login {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.card {
+  background: #1e293b;
+  padding: 30px;
+  border-radius: 12px;
+  width: 300px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
   border-radius: 8px;
   border: none;
+}
+
+button {
+  width: 100%;
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #22c55e;
+  color: white;
   cursor: pointer;
 }
+
+/* APP */
+#app {
+  display: none;
+}
+
+#topo {
+  padding: 10px;
+  background: #1e293b;
+}
+
+#map {
+  height: calc(100vh - 140px);
+}
+
+#admin {
+  padding: 10px;
+  background: #020617;
+}
 </style>
+
 </head>
 
 <body>
 
-<div id="topo">
-  <h3>Mapa de Serviços</h3>
+<!-- LOGIN -->
+
+<div id="login">
+  <div class="card">
+    <h3>Login</h3>
+    <input id="user" placeholder="Usuário">
+    <input id="senha" type="password" placeholder="Senha">
+    <button onclick="login()">Entrar</button>
+  </div>
 </div>
 
-<div id="map"></div>
+<!-- APP -->
+
+<div id="app">
+
+  <div id="topo">
+    <h3>Sistema de Despacho</h3>
+  </div>
+
+  <!-- ADMIN -->
+
+  <div id="admin">
+    <input type="file" id="file1">
+    <input type="file" id="file2">
+    <button onclick="enviarArquivos()">Processar</button>
+  </div>
+
+  <div id="map"></div>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
 <script>
-let map, layersGroup;
-let dadosOriginais = [];
+let map, layer;
 
+/* LOGIN */
+function login() {
+  const user = document.getElementById("user").value;
+  const senha = document.getElementById("senha").value;
+
+  if (user === "admin" && senha === "123456") {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
+
+    initMap();
+    carregarDados();
+  } else {
+    alert("Login inválido");
+  }
+}
+
+/* MAPA */
 function initMap() {
   map = L.map('map').setView([-7.12, -36.5], 8);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    maxZoom: 20
-  }).addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png')
+    .addTo(map);
 
-  layersGroup = L.layerGroup().addTo(map);
+  layer = L.layerGroup().addTo(map);
 }
 
-async function carregarDadosBackend() {
-  try {
-    const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/api/dados");
+/* CARREGAR DADOS */
+async function carregarDados() {
+  const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/api/dados");
+  const dados = await res.json();
 
-    if (!res.ok) {
-      const txt = await res.text();
-      console.error(txt);
-      alert("Erro ao buscar dados");
-      return;
-    }
+  layer.clearLayers();
 
-    const json = await res.json();
+  dados.forEach(p => {
+    if (!p.lat || !p.lon) return;
 
-    console.log("Dados recebidos:", json);
-
-    dadosOriginais = json.map(r => ({
-      lat: parseFloat(r.lat),
-      lon: parseFloat(r.lon),
-      os: r.os || "",
-      status: r.status || "",
-      base: r.base || "SEM BASE",
-      tipo: r.tipo || ""
-    }))
-    .filter(r => !isNaN(r.lat) && !isNaN(r.lon));
-
-    if (dadosOriginais.length === 0) {
-      alert("Nenhum ponto válido encontrado");
-      return;
-    }
-
-    desenharMapa();
-
-  } catch (e) {
-    console.error(e);
-    alert("Erro ao conectar com servidor");
-  }
-}
-function desenharMapa() {
-  layersGroup.clearLayers();
-
-  let coords = [];
-
-  dadosOriginais.forEach((ponto, i) => {
-
-    const marker = L.circleMarker([ponto.lat, ponto.lon], {
-      radius: 10,
-      fillColor: "#1a73e8",
-      color: "#fff",
-      weight: 2,
-      fillOpacity: 0.9
+    const m = L.circleMarker([p.lat, p.lon], {
+      radius: 8,
+      color: "#22c55e"
     });
 
-    marker.bindPopup(`
-      <b>OS:</b> ${ponto.os}<br>
-      <b>Status:</b> ${ponto.status}<br>
-      <b>Base:</b> ${ponto.base}<br>
-      <b>Tipo:</b> ${ponto.tipo}
+    m.bindPopup(`
+      OS: ${p.os}<br>
+      Status: ${p.status}<br>
+      Base: ${p.base}
     `);
 
-    marker.addTo(layersGroup);
-    coords.push([ponto.lat, ponto.lon]);
+    m.addTo(layer);
   });
-
-  if (coords.length > 0) {
-    map.fitBounds(coords);
-  }
 }
 
-initMap();
-carregarDadosBackend();
+/* UPLOAD */
+async function enviarArquivos() {
+  const f1 = document.getElementById("file1").files[0];
+  const f2 = document.getElementById("file2").files[0];
+
+  if (!f1 || !f2) {
+    alert("Envie os dois arquivos");
+    return;
+  }
+
+  const form = new FormData();
+  form.append("file1", f1);
+  form.append("file2", f2);
+
+  await fetch("https://despacholl-production.up.railway.app/upload", {
+    method: "POST",
+    body: form
+  });
+
+  alert("Processado!");
+
+  carregarDados();
+}
 </script>
 
 </body>
