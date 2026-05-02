@@ -14,56 +14,46 @@
 body { margin:0; font-family:Arial; background:#0b1220; color:white; }
 
 /* LOGIN */
-#login {
-  height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-
-.card {
-  background:#1e293b;
-  padding:30px;
-  border-radius:12px;
-  width:300px;
-}
+#login { height:100vh; display:flex; justify-content:center; align-items:center; }
+.card { background:#1e293b; padding:30px; border-radius:12px; width:300px; }
 
 /* APP */
 #app { display:none; }
 
 /* HEADER */
 #header {
-  display:flex;
-  gap:10px;
-  padding:10px;
+  height:50px;
   background:#020617;
-}
-
-#header button {
-  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 20px;
+  border-bottom:1px solid #1e293b;
 }
 
 /* LAYOUT */
 #layout {
   display:flex;
-  height:calc(100vh - 60px);
+  height:calc(100vh - 50px);
 }
 
-#filtros {
-  width:260px;
+/* SIDEBAR */
+#sidebar {
+  width:280px;
   background:#020617;
   padding:20px;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
 }
 
-#map {
-  flex:1;
-}
+/* MAP */
+#map { flex:1; }
 
 /* INPUTS */
 input, select, button {
   width:100%;
   padding:10px;
-  margin-top:10px;
   border-radius:8px;
   border:none;
   background:#1e293b;
@@ -75,40 +65,18 @@ button {
   cursor:pointer;
 }
 
-/* MODAL */
-#modal {
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:rgba(0,0,0,0.7);
-  display:none;
-  justify-content:center;
-  align-items:center;
-}
-
-.box {
-  background:#1e293b;
-  padding:20px;
-  border-radius:12px;
-  width:350px;
-}
-
-.drop {
-  border:2px dashed #475569;
-  padding:20px;
-  text-align:center;
-  margin-top:10px;
-  cursor:pointer;
+/* SECTIONS */
+.section {
+  background:#020617;
+  padding:10px;
+  border-radius:8px;
 }
 
 /* PROGRESS */
 #progress {
   margin-top:10px;
-  background:#020617;
+  background:#111827;
   border-radius:8px;
-  overflow:hidden;
 }
 
 #bar {
@@ -119,7 +87,10 @@ button {
   font-size:12px;
 }
 
-#status { margin-top:10px; }
+/* POPUP */
+.leaflet-popup-content {
+  font-size:14px;
+}
 </style>
 
 </head>
@@ -142,63 +113,67 @@ button {
 <div id="app">
 
 <div id="header">
-  <button onclick="abrirModal()">📁 Upload</button>
+  <div>📍 Despacho LL</div>
   <button style="background:#ef4444" onclick="logout()">Sair</button>
 </div>
 
 <div id="layout">
 
-<div id="filtros">
-  <h3>Filtros</h3>
+<!-- SIDEBAR -->
 
-  <input id="buscaOS" placeholder="Buscar OS..." oninput="carregar()">
+<div id="sidebar">
 
-  <select id="filtroTipo" onchange="carregar()">
-    <option value="">Todos</option>
-    <option value="PREVENTIVA">Preventiva</option>
-    <option value="CORRETIVA">Corretiva</option>
-  </select>
+  <!-- UPLOAD -->
 
-  <select id="filtroCriticidade" onchange="carregar()">
-    <option value="">Todos</option>
-    <option value="ALTA">Alta</option>
-    <option value="MEDIA">Média</option>
-    <option value="BAIXA">Baixa</option>
-  </select>
-
-  <div id="contador"></div>
-</div>
-
-<div id="map"></div>
-
-</div>
-</div>
-
-<!-- MODAL -->
-
-<div id="modal">
-  <div class="box">
-    <h3>Upload</h3>
+  <div class="section">
+    <h4>📁 Upload</h4>
+    <input type="file" id="file1">
+    <input type="file" id="file2">
+    <button onclick="processar()">Processar</button>
 
 ```
-<div class="drop" onclick="file1.click()">Arquivo 1</div>
-<input type="file" id="file1" hidden>
-
-<div class="drop" onclick="file2.click()">Arquivo 2</div>
-<input type="file" id="file2" hidden>
-
-<button onclick="processar()">Processar</button>
-
 <div id="progress">
   <div id="bar">0%</div>
 </div>
 
 <div id="status"></div>
-
-<button onclick="fecharModal()">Fechar</button>
 ```
 
   </div>
+
+  <!-- FILTROS -->
+
+  <div class="section">
+    <h4>📊 Filtros</h4>
+
+```
+<input id="buscaOS" placeholder="Buscar OS..." oninput="carregar()">
+
+<select id="filtroTipo" onchange="carregar()">
+  <option value="">Todos</option>
+  <option value="PREVENTIVA">Preventiva</option>
+  <option value="CORRETIVA">Corretiva</option>
+</select>
+
+<select id="filtroCriticidade" onchange="carregar()">
+  <option value="">Todos</option>
+  <option value="ALTA">Alta</option>
+  <option value="MEDIA">Média</option>
+  <option value="BAIXA">Baixa</option>
+</select>
+
+<div id="contador"></div>
+```
+
+  </div>
+
+</div>
+
+<!-- MAPA -->
+
+<div id="map"></div>
+
+</div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
@@ -210,23 +185,16 @@ let map, cluster;
 
 /* LOGIN */
 function loginSistema(){
-  const user = document.getElementById("user").value;
-  const senha = document.getElementById("senha").value;
-
-  if(user === "admin" && senha === "123456"){
+  if(user.value==="admin" && senha.value==="123456"){
     document.getElementById("login").style.display="none";
     document.getElementById("app").style.display="block";
 
     initMap();
     carregar();
-  } else {
-    alert("Login inválido");
-  }
+  } else alert("Login inválido");
 }
 
-function logout(){
-  location.reload();
-}
+function logout(){ location.reload(); }
 
 /* MAPA */
 function initMap(){
@@ -238,10 +206,6 @@ function initMap(){
   cluster=L.markerClusterGroup();
   map.addLayer(cluster);
 }
-
-/* MODAL */
-function abrirModal(){ modal.style.display="flex"; }
-function fecharModal(){ modal.style.display="none"; }
 
 /* COR */
 function cor(c){
@@ -277,7 +241,11 @@ async function carregar(){
       fillOpacity:0.9
     });
 
-    marker.bindPopup(`<b>OS:</b> ${p.os}`);
+    marker.bindPopup(`
+      <b>OS:</b> ${p.os}<br>
+      <b>Status:</b> ${p.status}
+    `);
+
     cluster.addLayer(marker);
   });
 }
@@ -302,6 +270,7 @@ async function processar(){
 
       return {
         os:r["OS Manutencao"],
+        status:r["Status"],
         lat, lon,
         criticidade:r["Criticidade"]
       };
@@ -330,7 +299,7 @@ async function processar(){
   bar.style.width="100%";
   bar.innerText="100%";
 
-  status.innerText="Concluído";
+  status.innerText="✅ Concluído";
 
   carregar();
 }
