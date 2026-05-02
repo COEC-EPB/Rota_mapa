@@ -137,12 +137,14 @@ async function processar() {
   status.className = "processando";
 
   try {
+    const wb1 = XLSX.read(await f1.arrayBuffer());
     const data1 = XLSX.utils.sheet_to_json(
-      XLSX.read(await f1.arrayBuffer()).Sheets.Sheet1
+      wb1.Sheets[wb1.SheetNames[0]]
     );
-
+    
+    const wb2 = XLSX.read(await f2.arrayBuffer());
     const data2 = XLSX.utils.sheet_to_json(
-      XLSX.read(await f2.arrayBuffer()).Sheets.Sheet1
+      wb2.Sheets[wb2.SheetNames[0]]
     );
 
     let dados = [...data1, ...data2];
