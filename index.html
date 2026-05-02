@@ -69,6 +69,21 @@ button {
   padding: 10px;
   background: #020617;
 }
+  #status {
+  padding: 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+.processando {
+  background: #facc15;
+  color: black;
+}
+.sucesso {
+  background: #22c55e;
+}
+.erro {
+  background: #ef4444;
+}
 </style>
 
 </head>
@@ -97,6 +112,7 @@ button {
   <!-- ADMIN -->
 
   <div id="admin">
+    <div id="status" style="margin-top:10px; font-weight:bold;"></div>
     <input type="file" id="file1">
     <input type="file" id="file2">
     <button onclick="enviarArquivos()">Processar</button>
@@ -165,24 +181,46 @@ async function carregarDados() {
 async function enviarArquivos() {
   const f1 = document.getElementById("file1").files[0];
   const f2 = document.getElementById("file2").files[0];
+  const status = document.getElementById("status");
 
   if (!f1 || !f2) {
     alert("Envie os dois arquivos");
     return;
   }
 
+  // 🔄 PROCESSANDO
+  status.innerText = "⏳ Processando...";
+  status.className = "processando";
+
   const form = new FormData();
   form.append("file1", f1);
   form.append("file2", f2);
 
-  await fetch("https://despacholl-production.up.railway.app/upload", {
-    method: "POST",
-    body: form
-  });
+  try {
+    const res = await fetch("https://despacholl-production.up.railway.app/upload", {
+      method: "POST",
+      body: form
+    });
 
-  alert("Processado!");
+    if (!res.ok) {
+      throw new Error("Erro no upload");
+    }
 
-  carregarDados();
+    const json = await res.json();
+
+    // ✅ SUCESSO
+    status.innerText = `✅ Processamento completo (${json.total} registros)`;
+    status.className = "sucesso";
+
+    carregarDados();
+
+  } catch (e) {
+    console.error(e);
+
+    // ❌ ERRO
+    status.innerText = "❌ Erro no processamento";
+    status.className = "erro";
+  }
 }
 </script>
 
