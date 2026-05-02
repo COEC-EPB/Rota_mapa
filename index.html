@@ -7,6 +7,7 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 body { margin:0; font-family:Arial; background:#0b1220; color:white; }
@@ -204,23 +205,35 @@ function cor(c){
 }
 
 /* UPLOAD COM PROGRESSO REAL */
-function enviar() {
+async function enviar() {
   const file = document.getElementById("file").files[0];
   const status = document.getElementById("status");
   const bar = document.getElementById("bar");
 
   if (!file) {
-    alert("Selecione o arquivo CSV");
+    alert("Selecione o Excel");
     return;
   }
 
-  status.innerText = "⏳ Enviando...";
-  bar.style.width = "0%";
-  bar.innerText = "0%";
+  status.innerText = "⏳ Processando Excel...";
+  bar.style.width = "10%";
 
   const reader = new FileReader();
 
-  reader.onload = function () {
+  reader.onload = async function(e) {
+    const data = new Uint8Array(e.target.result);
+
+    const workbook = XLSX.read(data, { type: "array" });
+
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+    // 🔥 converte pra CSV
+    const csv = XLSX.utils.sheet_to_csv(sheet);
+
+    bar.style.width = "50%";
+    bar.innerText = "50%";
+
+    // 🔥 envia CSV pro Worker
     const xhr = new XMLHttpRequest();
 
     xhr.open("POST", "https://despacholinhaviva.pedro-fillype.workers.dev/upload");
@@ -252,10 +265,10 @@ function enviar() {
       status.innerText = "❌ Falha na conexão";
     };
 
-    xhr.send(reader.result);
+    xhr.send(csv);
   };
 
-  reader.readAsText(file);
+  reader.readAsArrayBuffer(file);
 }
 
 /* MAPA */
