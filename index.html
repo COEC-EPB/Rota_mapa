@@ -10,12 +10,38 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
 <style>
 body { margin:0; font-family:Arial; background:#0b1220; color:white; }
 
-#layout { display:flex; height:100vh; }
+/* LOGIN */
+#login {
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.card {
+  background:#1e293b;
+  padding:30px;
+  border-radius:12px;
+  width:320px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.4);
+}
+
+/* APP */
+#app { display:none; }
+
+#header {
+  background:#020617;
+  padding:10px 20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom:1px solid #1e293b;
+}
+
+#layout { display:flex; height:calc(100vh - 60px); }
 
 #filtros {
   width:280px;
@@ -26,6 +52,7 @@ body { margin:0; font-family:Arial; background:#0b1220; color:white; }
 
 #map { flex:1; }
 
+/* INPUTS */
 input, select, button {
   width:100%;
   margin-top:10px;
@@ -36,7 +63,15 @@ input, select, button {
   color:white;
 }
 
-button { background:#22c55e; font-weight:bold; cursor:pointer; }
+button {
+  background:#22c55e;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+#logout {
+  background:#ef4444;
+}
 
 #contador { margin-top:10px; color:#94a3b8; }
 </style>
@@ -45,36 +80,63 @@ button { background:#22c55e; font-weight:bold; cursor:pointer; }
 
 <body>
 
-<div id="layout">
+<!-- LOGIN -->
 
+<div id="login">
+  <div class="card">
+    <h2>🔐 Despacho LL</h2>
+    <input id="user" placeholder="Usuário">
+    <input id="senha" type="password" placeholder="Senha">
+    <button onclick="loginSistema()">Entrar</button>
+  </div>
+</div>
+
+<!-- APP -->
+
+<div id="app">
+
+  <!-- HEADER -->
+
+  <div id="header">
+    <div>📍 Despacho LL</div>
+    <button id="logout" onclick="logout()">Sair</button>
+  </div>
+
+  <div id="layout">
+
+```
+<!-- FILTROS -->
 <div id="filtros">
 
-<h3>📊 Filtros</h3>
+  <h3>📊 Filtros</h3>
 
-<input id="buscaOS" placeholder="🔍 Buscar OS..." oninput="carregar()">
+  <input id="buscaOS" placeholder="🔍 Buscar OS..." oninput="carregar()">
 
-<label>Tipo</label> <select id="filtroTipo" onchange="carregar()">
+  <label>Tipo</label>
+  <select id="filtroTipo" onchange="carregar()">
+    <option value="">Todos</option>
+    <option value="PREVENTIVA">Preventiva</option>
+    <option value="CORRETIVA">Corretiva</option>
+    <option value="INSPECAO">Inspeção</option>
+  </select>
 
-  <option value="">Todos</option>
-  <option value="PREVENTIVA">Preventiva</option>
-  <option value="CORRETIVA">Corretiva</option>
-  <option value="INSPECAO">Inspeção</option>
-</select>
+  <label>Criticidade</label>
+  <select id="filtroCriticidade" onchange="carregar()">
+    <option value="">Todos</option>
+    <option value="ALTA">Alta</option>
+    <option value="MEDIA">Média</option>
+    <option value="BAIXA">Baixa</option>
+  </select>
 
-<label>Criticidade</label> <select id="filtroCriticidade" onchange="carregar()">
-
-  <option value="">Todos</option>
-  <option value="ALTA">Alta</option>
-  <option value="MEDIA">Média</option>
-  <option value="BAIXA">Baixa</option>
-</select>
-
-<div id="contador"></div>
+  <div id="contador"></div>
 
 </div>
 
+<!-- MAPA -->
 <div id="map"></div>
+```
 
+  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
@@ -84,6 +146,27 @@ button { background:#22c55e; font-weight:bold; cursor:pointer; }
 <script>
 let map, clusterGroup;
 
+/* LOGIN */
+function loginSistema() {
+  const user = document.getElementById("user").value;
+  const senha = document.getElementById("senha").value;
+
+  if (user === "admin" && senha === "123456") {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
+
+    initMap();
+    carregar();
+  } else {
+    alert("Login inválido");
+  }
+}
+
+function logout() {
+  location.reload();
+}
+
+/* MAPA */
 function initMap() {
   map = L.map('map').setView([-7.12, -36.5], 8);
 
@@ -94,6 +177,7 @@ function initMap() {
   map.addLayer(clusterGroup);
 }
 
+/* COR */
 function corPorCriticidade(c) {
   if (!c) return "#94a3b8";
 
@@ -106,6 +190,7 @@ function corPorCriticidade(c) {
   return "#3b82f6";
 }
 
+/* CARREGAR */
 async function carregar() {
   const tipo = filtroTipo.value;
   const crit = filtroCriticidade.value;
@@ -116,7 +201,6 @@ async function carregar() {
 
   clusterGroup.clearLayers();
 
-  // 🔥 FILTRO COMPLETO (inclui validação de coordenadas)
   dados = dados.filter(p => {
     const lat = parseFloat(p.lat);
     const lon = parseFloat(p.lon);
@@ -132,7 +216,7 @@ async function carregar() {
   });
 
   document.getElementById("contador").innerText =
-    "Total: " + dados.length + " registros válidos";
+    "Total: " + dados.length;
 
   const bounds = [];
 
@@ -167,9 +251,6 @@ async function carregar() {
     map.fitBounds(bounds);
   }
 }
-
-initMap();
-carregar();
 </script>
 
 </body>
