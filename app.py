@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import pandas as pd
 import psycopg2
 import os
+import requests
 
 app = Flask(__name__)
 
@@ -68,45 +69,18 @@ def upload():
     file1 = request.files.get("file1")
     file2 = request.files.get("file2")
 
-    if not file1 or not file2:
-        return jsonify({"erro": "Envie os dois arquivos"}), 400
-
     dados = processar_arquivos(file1, file2)
 
-    # LIMPA TABELA
-    cursor.execute("DELETE FROM servicos")
-
-    # INSERE
-    for item in dados:
-        cursor.execute("""
-            INSERT INTO servicos (
-                os, status, data_criacao, base,
-                qtd_clientes, alimentador,
-                lat, lon, trecho, tag, criticidade, tipo
-            )
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        """, (
-            item["os"],
-            item["status"],
-            item["data_criacao"],
-            item["base"],
-            item["qtd_clientes"],
-            item["alimentador"],
-            item["lat"],
-            item["lon"],
-            item["trecho"],
-            item["tag"],
-            item["criticidade"],
-            item["tipo"]
-        ))
-
-    conn.commit()
+    # envia pro Cloudflare Worker
+    requests.post(
+        "https://despacholinhaviva.pedro-fillype.workers.dev/salvar",
+        json=dados
+    )
 
     return jsonify({
         "ok": True,
         "total": len(dados)
     })
-
 
 # 📊 DADOS PARA O MAPA
 @app.route("/dados", methods=["GET"])
