@@ -7,29 +7,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 body { margin:0; font-family:Arial; background:#0b1220; color:white; }
 
-#login { height:100vh; display:flex; justify-content:center; align-items:center; }
-
-.card { background:#1e293b; padding:30px; border-radius:12px; width:300px; }
-
-input, button, select {
-  width:100%; margin-top:10px; padding:10px; border-radius:8px; border:none;
-}
-
-button { background:#22c55e; color:white; cursor:pointer; font-weight:bold; }
-
-#app { display:none; }
-
-#admin { padding:10px; background:#020617; }
-
 #layout { display:flex; height:100vh; }
 
 #filtros {
-  width:260px;
+  width:280px;
   background:#020617;
   padding:20px;
   border-right:1px solid #1e293b;
@@ -37,72 +26,43 @@ button { background:#22c55e; color:white; cursor:pointer; font-weight:bold; }
 
 #map { flex:1; }
 
-#status { margin-top:10px; padding:8px; border-radius:6px; }
-
-.processando { background:#facc15; color:black; }
-.sucesso { background:#22c55e; }
-.erro { background:#ef4444; }
-
-#progressContainer { margin-top:10px; display:none; }
-#progressBar {
-  width:0%;
-  height:20px;
-  background:#22c55e;
-  text-align:center;
+input, select, button {
+  width:100%;
+  margin-top:10px;
+  padding:10px;
+  border-radius:8px;
+  border:none;
+  background:#1e293b;
   color:white;
-  font-size:12px;
 }
+
+button { background:#22c55e; font-weight:bold; cursor:pointer; }
+
+#contador { margin-top:10px; color:#94a3b8; }
 </style>
 
 </head>
 
 <body>
 
-<!-- LOGIN -->
-
-<div id="login">
-  <div class="card">
-    <h3>Login</h3>
-    <input id="user" placeholder="Usuário">
-    <input id="senha" type="password" placeholder="Senha">
-    <button onclick="login()">Entrar</button>
-  </div>
-</div>
-
-<!-- APP -->
-
-<div id="app">
-
-<div id="admin">
-  <input type="file" id="file1">
-  <input type="file" id="file2">
-  <button onclick="processar()">Processar</button>
-
-  <div id="progressContainer">
-    <div style="background:#1e293b; border-radius:8px; overflow:hidden;">
-      <div id="progressBar">0%</div>
-    </div>
-  </div>
-
-  <div id="status"></div>
-</div>
-
 <div id="layout">
 
-  <div id="filtros">
-    <h4>📊 Filtros</h4>
+<div id="filtros">
 
-```
-<label>Tipo</label>
-<select id="filtroTipo" onchange="carregar()">
+<h3>📊 Filtros</h3>
+
+<input id="buscaOS" placeholder="🔍 Buscar OS..." oninput="carregar()">
+
+<label>Tipo</label> <select id="filtroTipo" onchange="carregar()">
+
   <option value="">Todos</option>
   <option value="PREVENTIVA">Preventiva</option>
   <option value="CORRETIVA">Corretiva</option>
   <option value="INSPECAO">Inspeção</option>
 </select>
 
-<label>Criticidade</label>
-<select id="filtroCriticidade" onchange="carregar()">
+<label>Criticidade</label> <select id="filtroCriticidade" onchange="carregar()">
+
   <option value="">Todos</option>
   <option value="ALTA">Alta</option>
   <option value="MEDIA">Média</option>
@@ -110,38 +70,19 @@ button { background:#22c55e; color:white; cursor:pointer; font-weight:bold; }
 </select>
 
 <div id="contador"></div>
-```
 
-  </div>
-
-  <div id="map"></div>
 </div>
+
+<div id="map"></div>
+
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
 <script>
-let map, layer;
-
-function login() {
-  const userVal = document.getElementById("user").value;
-  const senhaVal = document.getElementById("senha").value;
-
-  if (userVal === "admin" && senhaVal === "123456") {
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").style.display = "block";
-    initMap();
-    carregar();
-  } else {
-    alert("Login inválido");
-  }
-}
-
-function atualizarBarra(percent) {
-  const bar = document.getElementById("progressBar");
-  bar.style.width = percent + "%";
-  bar.innerText = percent + "%";
-}
+let map, clusterGroup;
 
 function initMap() {
   map = L.map('map').setView([-7.12, -36.5], 8);
@@ -149,56 +90,41 @@ function initMap() {
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png')
     .addTo(map);
 
-  layer = L.layerGroup().addTo(map);
-
-  const legenda = L.control({ position: "bottomright" });
-
-  legenda.onAdd = function () {
-    const div = L.DomUtil.create("div");
-    div.style.background = "white";
-    div.style.padding = "10px";
-    div.style.color = "black";
-    div.style.borderRadius = "8px";
-
-    div.innerHTML = `
-      <b>Legenda</b><br>
-      <div><span style="background:#22c55e;width:10px;height:10px;display:inline-block;"></span> Preventiva</div>
-      <div><span style="background:#ef4444;width:10px;height:10px;display:inline-block;"></span> Corretiva</div>
-      <div><span style="background:#3b82f6;width:10px;height:10px;display:inline-block;"></span> Inspeção</div>
-    `;
-    return div;
-  };
-
-  legenda.addTo(map);
+  clusterGroup = L.markerClusterGroup();
+  map.addLayer(clusterGroup);
 }
 
-function corPorTipo(tipo) {
-  if (!tipo) return "#94a3b8";
-  tipo = tipo.toUpperCase();
+function corPorCriticidade(c) {
+  if (!c) return "#94a3b8";
 
-  if (tipo.includes("PREVENTIVA")) return "#22c55e";
-  if (tipo.includes("CORRETIVA")) return "#ef4444";
-  if (tipo.includes("INSPECAO")) return "#3b82f6";
+  c = c.toUpperCase();
 
-  return "#facc15";
+  if (c.includes("ALTA")) return "#ef4444";
+  if (c.includes("MEDIA")) return "#facc15";
+  if (c.includes("BAIXA")) return "#22c55e";
+
+  return "#3b82f6";
 }
 
 async function carregar() {
-  const tipoFiltro = filtroTipo.value;
-  const critFiltro = filtroCriticidade.value;
+  const tipo = filtroTipo.value;
+  const crit = filtroCriticidade.value;
+  const busca = buscaOS.value.toUpperCase();
 
   const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/api/dados");
   let dados = await res.json();
 
-  layer.clearLayers();
+  clusterGroup.clearLayers();
 
   dados = dados.filter(p => {
-    if (tipoFiltro && !p.tipo?.toUpperCase().includes(tipoFiltro)) return false;
-    if (critFiltro && !p.criticidade?.toUpperCase().includes(critFiltro)) return false;
+    if (tipo && !p.tipo?.toUpperCase().includes(tipo)) return false;
+    if (crit && !p.criticidade?.toUpperCase().includes(crit)) return false;
+    if (busca && !p.os?.toUpperCase().includes(busca)) return false;
     return true;
   });
 
-  document.getElementById("contador").innerText = "Total: " + dados.length;
+  document.getElementById("contador").innerText =
+    "Total: " + dados.length + " registros";
 
   const bounds = [];
 
@@ -207,14 +133,15 @@ async function carregar() {
 
     bounds.push([p.lat, p.lon]);
 
-    L.circleMarker([p.lat, p.lon], {
+    const marker = L.circleMarker([p.lat, p.lon], {
       radius: 8,
-      fillColor: corPorTipo(p.tipo),
+      fillColor: corPorCriticidade(p.criticidade),
       color: "#fff",
       weight: 1,
       fillOpacity: 0.9
-    })
-    .bindPopup(`
+    });
+
+    marker.bindPopup(`
       <b>OS:</b> ${p.os}<br>
       <b>Status:</b> ${p.status}<br>
       <b>Data:</b> ${p.data_criacao || "-"}<br>
@@ -222,89 +149,16 @@ async function carregar() {
       <b>Tipo:</b> ${p.tipo || "-"}<br>
       <b>Tag:</b> ${p.tag || "-"}<br>
       <b>Criticidade:</b> ${p.criticidade || "-"}
-    `)
-    .addTo(layer);
+    `);
+
+    clusterGroup.addLayer(marker);
   });
 
   if (bounds.length) map.fitBounds(bounds);
 }
 
-async function processar() {
-  const f1 = file1.files[0];
-  const f2 = file2.files[0];
-  const status = document.getElementById("status");
-  const progressContainer = document.getElementById("progressContainer");
-
-  if (!f1 || !f2) {
-    alert("Envie os dois arquivos");
-    return;
-  }
-
-  status.innerText = "⏳ Processando...";
-  status.className = "processando";
-  progressContainer.style.display = "block";
-
-  try {
-    const wb1 = XLSX.read(await f1.arrayBuffer());
-    const data1 = XLSX.utils.sheet_to_json(wb1.Sheets[wb1.SheetNames[0]]);
-
-    const wb2 = XLSX.read(await f2.arrayBuffer());
-    const data2 = XLSX.utils.sheet_to_json(wb2.Sheets[wb2.SheetNames[0]]);
-
-    let dados = [...data1, ...data2];
-
-    dados = dados.filter(r =>
-      r.Status === "CRIADA" || r.Status === "A REPROGRAMAR"
-    );
-
-    dados = dados.map(r => ({
-      os: r["OS Manutencao"] || r["OS Manutenção"] || "",
-      status: r["Status"] || "",
-      data_criacao: r["Data Criacao"] || "",
-      base: r["Base Operacao"] || "",
-      qtd_clientes: r["Qtd Clientes Cadastrados"] || 0,
-      alimentador: r["Nome do Alimentador"] || "",
-      lat: parseFloat(String(r["Latitude"]).replace(",", ".")),
-      lon: parseFloat(String(r["Longitude"]).replace(",", ".")),
-      trecho: r["Trecho"] || "",
-      tag: r["Tag Ativo"] || "",
-      criticidade: r["Criticidade"] || "",
-      tipo: r["Tipo Manutencao"] || ""
-    }));
-
-    const chunkSize = 300;
-
-    for (let i = 0; i < dados.length; i += chunkSize) {
-      const chunk = dados.slice(i, i + chunkSize);
-
-      const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/salvar", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-reset": i === 0 ? "true" : "false"
-        },
-        body: JSON.stringify(chunk)
-      });
-
-      if (!res.ok) throw new Error(await res.text());
-
-      const progresso = Math.floor((i + chunk.length) / dados.length * 100);
-      atualizarBarra(progresso);
-    }
-
-    atualizarBarra(100);
-
-    status.innerText = `✅ Processamento completo (${dados.length} registros)`;
-    status.className = "sucesso";
-
-    carregar();
-
-  } catch (e) {
-    console.error(e);
-    status.innerText = "❌ Erro no processamento";
-    status.className = "erro";
-  }
-}
+initMap();
+carregar();
 </script>
 
 </body>
