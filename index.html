@@ -3,87 +3,47 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Sistema de Despacho</title>
+<title>Despacho LL</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial;
-  background: #0f172a;
-  color: white;
-}
+body { margin:0; font-family:Arial; background:#0f172a; color:white; }
 
-/* LOGIN */
 #login {
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  height:100vh; display:flex; justify-content:center; align-items:center;
 }
 
 .card {
-  background: #1e293b;
-  padding: 30px;
-  border-radius: 12px;
-  width: 300px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  background:#1e293b; padding:30px; border-radius:12px; width:300px;
 }
 
-input {
-  width: 100%;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 8px;
-  border: none;
+input, button {
+  width:100%; margin-top:10px; padding:10px; border-radius:8px; border:none;
 }
 
-button {
-  width: 100%;
-  margin-top: 15px;
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  background: #22c55e;
-  color: white;
-  cursor: pointer;
-}
+button { background:#22c55e; color:white; cursor:pointer; }
 
-/* APP */
-#app {
-  display: none;
-}
-
-#topo {
-  padding: 10px;
-  background: #1e293b;
-}
-
-#map {
-  height: calc(100vh - 140px);
-}
+#app { display:none; }
 
 #admin {
-  padding: 10px;
-  background: #020617;
+  padding:10px;
+  background:#020617;
 }
-  #status {
-  padding: 8px;
-  border-radius: 6px;
-  display: inline-block;
+
+#status {
+  margin-top:10px;
+  padding:8px;
+  border-radius:6px;
 }
-.processando {
-  background: #facc15;
-  color: black;
-}
-.sucesso {
-  background: #22c55e;
-}
-.erro {
-  background: #ef4444;
-}
+
+.processando { background:#facc15; color:black; }
+.sucesso { background:#22c55e; }
+.erro { background:#ef4444; }
+
+#map { height:calc(100vh - 160px); }
 </style>
 
 </head>
@@ -105,17 +65,11 @@ button {
 
 <div id="app">
 
-  <div id="topo">
-    <h3>Sistema de Despacho</h3>
-  </div>
-
-  <!-- ADMIN -->
-
   <div id="admin">
-    <div id="status" style="margin-top:10px; font-weight:bold;"></div>
     <input type="file" id="file1">
     <input type="file" id="file2">
-    <button onclick="enviarArquivos()">Processar</button>
+    <button onclick="processar()">Processar</button>
+    <div id="status"></div>
   </div>
 
   <div id="map"></div>
@@ -128,15 +82,11 @@ let map, layer;
 
 /* LOGIN */
 function login() {
-  const user = document.getElementById("user").value;
-  const senha = document.getElementById("senha").value;
-
-  if (user === "admin" && senha === "123456") {
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").style.display = "block";
-
+  if (user.value === "admin" && senha.value === "123456") {
+    loginDiv.style.display = "none";
+    app.style.display = "block";
     initMap();
-    carregarDados();
+    carregar();
   } else {
     alert("Login inválido");
   }
@@ -153,7 +103,7 @@ function initMap() {
 }
 
 /* CARREGAR DADOS */
-async function carregarDados() {
+async function carregar() {
   const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/api/dados");
   const dados = await res.json();
 
@@ -162,25 +112,16 @@ async function carregarDados() {
   dados.forEach(p => {
     if (!p.lat || !p.lon) return;
 
-    const m = L.circleMarker([p.lat, p.lon], {
-      radius: 8,
-      color: "#22c55e"
-    });
-
-    m.bindPopup(`
-      OS: ${p.os}<br>
-      Status: ${p.status}<br>
-      Base: ${p.base}
-    `);
-
-    m.addTo(layer);
+    L.circleMarker([p.lat, p.lon], { radius: 8, color:"#22c55e" })
+      .bindPopup(`OS: ${p.os}<br>Status: ${p.status}`)
+      .addTo(layer);
   });
 }
 
-/* UPLOAD */
-async function enviarArquivos() {
-  const f1 = document.getElementById("file1").files[0];
-  const f2 = document.getElementById("file2").files[0];
+/* PROCESSAR EXCEL */
+async function processar() {
+  const f1 = file1.files[0];
+  const f2 = file2.files[0];
   const status = document.getElementById("status");
 
   if (!f1 || !f2) {
@@ -188,36 +129,50 @@ async function enviarArquivos() {
     return;
   }
 
-  // 🔄 PROCESSANDO
   status.innerText = "⏳ Processando...";
   status.className = "processando";
 
-  const form = new FormData();
-  form.append("file1", f1);
-  form.append("file2", f2);
-
   try {
-    const res = await fetch("https://despacholl-production.up.railway.app/upload", {
+    const data1 = XLSX.utils.sheet_to_json(
+      XLSX.read(await f1.arrayBuffer()).Sheets.Sheet1
+    );
+
+    const data2 = XLSX.utils.sheet_to_json(
+      XLSX.read(await f2.arrayBuffer()).Sheets.Sheet1
+    );
+
+    let dados = [...data1, ...data2];
+
+    dados = dados
+      .filter(r => r.Status === "CRIADA" || r.Status === "A REPROGRAMAR")
+      .map(r => ({
+        os: r["OS Manutencao"],
+        status: r["Status"],
+        data_criacao: r["Data Criacao"],
+        base: r["Base Operacao"],
+        qtd_clientes: r["Qtd Clientes Cadastrados"],
+        alimentador: r["Nome do Alimentador"],
+        lat: parseFloat(String(r["Latitude"]).replace(",", ".")),
+        lon: parseFloat(String(r["Longitude"]).replace(",", ".")),
+        trecho: r["Trecho"],
+        tag: r["Tag Ativo"],
+        criticidade: r["Criticidade"],
+        tipo: r["Tipo Manutencao"]
+      }));
+
+    await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/salvar", {
       method: "POST",
-      body: form
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dados)
     });
 
-    if (!res.ok) {
-      throw new Error("Erro no upload");
-    }
-
-    const json = await res.json();
-
-    // ✅ SUCESSO
-    status.innerText = `✅ Processamento completo (${json.total} registros)`;
+    status.innerText = "✅ Processamento completo";
     status.className = "sucesso";
 
-    carregarDados();
+    carregar();
 
   } catch (e) {
     console.error(e);
-
-    // ❌ ERRO
     status.innerText = "❌ Erro no processamento";
     status.className = "erro";
   }
