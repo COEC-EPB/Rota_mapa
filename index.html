@@ -164,11 +164,18 @@ async function processar() {
         tipo: r["Tipo Manutencao"]
       }));
 
-    await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/salvar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(dados)
-    });
+    const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/salvar", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(dados)
+  });
+  
+  const text = await res.text();
+  console.log("RESPOSTA:", text);
+  
+  if (!res.ok) {
+    throw new Error("Erro ao salvar: " + text);
+  }
 
     status.innerText = "✅ Processamento completo";
     status.className = "sucesso";
