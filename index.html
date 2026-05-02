@@ -199,15 +199,27 @@ async function processar() {
 
     atualizarBarra(80);
 
-    // ☁️ ENVIO
-    const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/salvar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(dados)
-    });
+    const chunkSize = 300;
 
-    if (!res.ok) {
-      throw new Error(await res.text());
+    for (let i = 0; i < dados.length; i += chunkSize) {
+      const chunk = dados.slice(i, i + chunkSize);
+    
+      const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/salvar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-reset": i === 0 ? "true" : "false"
+        },
+        body: JSON.stringify(chunk)
+      });
+    
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+    
+      // 🔄 atualiza progresso real
+      const progresso = Math.floor((i + chunk.length) / dados.length * 100);
+      atualizarBarra(progresso);
     }
 
     atualizarBarra(100);
