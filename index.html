@@ -191,9 +191,35 @@ function init(){
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
 
   cluster = L.markerClusterGroup({
-    maxClusterRadius: 120,
-    disableClusteringAtZoom: 18,
-    chunkedLoading: true
+
+    maxClusterRadius: 100,
+    disableClusteringAtZoom: 16,
+    chunkedLoading: true,
+
+    iconCreateFunction: function (cluster) {
+      const count = cluster.getChildCount();
+
+      let size = 40;
+      if (count > 50) size = 50;
+      if (count > 100) size = 60;
+
+      return L.divIcon({
+        html: `<div style="
+          background:#1e293b;
+          color:white;
+          border-radius:50%;
+          width:${size}px;
+          height:${size}px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-weight:bold;
+          border:2px solid #22c55e;
+        ">${count}</div>`,
+        className: "",
+        iconSize: [size, size]
+      });
+    }
   });
 
   map.addLayer(cluster);
@@ -321,16 +347,16 @@ async function carregar(){
     bounds.push([lat,lon]);
 
     const marker = L.marker([lat,lon],{
-      icon: L.divIcon({
-        html:`<div style="
-          width:12px;
-          height:12px;
-          background:${corTipo(p.tipo)};
-          border-radius:50%;
-          border:2px solid white;
-        "></div>`
-      })
-    });
+  icon: L.divIcon({
+    html:`<div style="
+      width:16px;
+      height:16px;
+      background:${corTipo(p.tipo)};
+      border-radius:50%;
+      border:3px solid white;
+    "></div>`
+  })
+});
 
     marker.bindPopup(`
       <b>OS:</b> ${p.os}<br>
