@@ -72,6 +72,22 @@ button {
 #logout {
   background:#ef4444;
 }
+  #admin {
+  background:#020617;
+  padding:15px 20px;
+  border-bottom:1px solid #1e293b;
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+#admin input {
+  max-width:200px;
+}
+
+#admin button {
+  max-width:150px;
+}
 
 #contador { margin-top:10px; color:#94a3b8; }
 </style>
@@ -101,7 +117,14 @@ button {
     <div>📍 Despacho LL</div>
     <button id="logout" onclick="logout()">Sair</button>
   </div>
+   <!-- 🔥 ADMIN (UPLOAD VOLTOU AQUI) -->
+  <div id="admin">
+    <input type="file" id="file1">
+    <input type="file" id="file2">
+    <button onclick="processar()">Processar</button>
 
+    <div id="status"></div>
+  </div>
   <div id="layout">
 
 ```
