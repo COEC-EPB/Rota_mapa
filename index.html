@@ -197,14 +197,72 @@ function init(){
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
 
   cluster = L.markerClusterGroup({
-    maxClusterRadius: z=>z<8?80:z<12?50:20,
-    disableClusteringAtZoom:14,
-    chunkedLoading:true
-  });
+  maxClusterRadius: z => z < 8 ? 80 : z < 12 ? 50 : 20,
+  disableClusteringAtZoom: 14,
+  chunkedLoading: true,
 
+  iconCreateFunction: function (cluster) {
+    const count = cluster.getChildCount();
+
+    return L.divIcon({
+      html: `<div style="
+        background:#1e293b;
+        color:white;
+        border-radius:50%;
+        width:40px;
+        height:40px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-weight:bold;
+      ">${count}</div>`,
+      className: "cluster",
+      iconSize: L.point(40, 40)
+    });
+  }
+});
+let legendaControl = null;
   map.addLayer(cluster);
 }
+function atualizarLegenda(){
 
+  if (legendaControl) {
+    map.removeControl(legendaControl);
+  }
+
+  legendaControl = L.control({position:"bottomright"});
+
+  legendaControl.onAdd = function(){
+    const div = L.DomUtil.create("div");
+
+    div.style.background="#020617";
+    div.style.padding="10px";
+    div.style.borderRadius="8px";
+    div.style.maxHeight="200px";
+    div.style.overflowY="auto";
+
+    let html="<b>Tipos</b><br>";
+
+    Object.entries(coresTipo).forEach(([t,c])=>{
+      html+=`
+        <div style="margin-top:4px;">
+          <span style="
+            background:${c};
+            width:10px;
+            height:10px;
+            display:inline-block;
+            margin-right:6px
+          "></span>
+          ${t}
+        </div>`;
+    });
+
+    div.innerHTML=html;
+    return div;
+  };
+
+  legendaControl.addTo(map);
+}
 /* COR POR TIPO */
 function corTipo(tipo){
   if(!tipo) return "#94a3b8";
@@ -310,12 +368,18 @@ async function carregar(){
   contador.innerText="Total: "+dados.length;
 
   dados.forEach(p=>{
-    const marker = L.circleMarker([p.lat,p.lon],{
-      radius:8,
-      fillColor:corTipo(p.tipo),
-      color:"#fff",
-      fillOpacity:0.9
-    });
+    const marker = L.marker([p.lat, p.lon], {
+  icon: L.divIcon({
+    className: "custom-marker",
+    html: `<div style="
+      width:12px;
+      height:12px;
+      background:${corTipo(p.tipo)};
+      border-radius:50%;
+      border:2px solid white;
+    "></div>`
+  })
+});
 
     marker.bindPopup(`
       <b>OS:</b> ${p.os}<br>
@@ -329,8 +393,8 @@ async function carregar(){
 
     cluster.addLayer(marker);
   });
-
   legenda();
+  atualizarLegenda();
 }
 </script>
 
