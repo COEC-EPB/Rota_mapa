@@ -147,24 +147,28 @@ async function processar() {
       wb2.Sheets[wb2.SheetNames[0]]
     );
 
+    console.log("LINHAS 1:", data1.length);
+    console.log("LINHAS 2:", data2.length);
+    console.log("COLUNAS:", Object.keys(data1[0]));
+
     let dados = [...data1, ...data2];
 
     dados = dados
       .filter(r => r.Status === "CRIADA" || r.Status === "A REPROGRAMAR")
       .map(r => ({
-        os: r["OS Manutencao"],
-        status: r["Status"],
-        data_criacao: r["Data Criacao"],
-        base: r["Base Operacao"],
-        qtd_clientes: r["Qtd Clientes Cadastrados"],
-        alimentador: r["Nome do Alimentador"],
-        lat: parseFloat(String(r["Latitude"]).replace(",", ".")),
-        lon: parseFloat(String(r["Longitude"]).replace(",", ".")),
-        trecho: r["Trecho"],
-        tag: r["Tag Ativo"],
-        criticidade: r["Criticidade"],
-        tipo: r["Tipo Manutencao"]
-      }));
+        os: r["OS Manutencao"] || r["OS Manutenção"] || "",
+        status: r["Status"] || "",
+        data_criacao: r["Data Criacao"] || r["Data Criação"] || "",
+        base: r["Base Operacao"] || "",
+        qtd_clientes: r["Qtd Clientes Cadastrados"] || 0,
+        alimentador: r["Nome do Alimentador"] || "",
+        lat: parseFloat(String(r["Latitude"] || "0").replace(",", ".")),
+        lon: parseFloat(String(r["Longitude"] || "0").replace(",", ".")),
+        trecho: r["Trecho"] || "",
+        tag: r["Tag Ativo"] || "",
+        criticidade: r["Criticidade"] || "",
+        tipo: r["Tipo Manutencao"] || r["Tipo Manutenção"] || ""
+      }))
 
     const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/salvar", {
   method: "POST",
