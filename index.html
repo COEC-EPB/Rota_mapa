@@ -8,30 +8,17 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 body { margin:0; font-family:Arial; background:#0b1220; color:white; }
 
 /* LOGIN */
-#login {
-  height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
+#login { height:100vh; display:flex; justify-content:center; align-items:center; }
+.card { background:#1e293b; padding:30px; border-radius:12px; width:320px; }
 
-.card {
-  background:#1e293b;
-  padding:30px;
-  border-radius:12px;
-  width:320px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.4);
-}
-
-/* APP */
-#app { display:none; }
-
+/* HEADER */
 #header {
   background:#020617;
   padding:10px 20px;
@@ -41,15 +28,14 @@ body { margin:0; font-family:Arial; background:#0b1220; color:white; }
   border-bottom:1px solid #1e293b;
 }
 
+/* LAYOUT */
 #layout { display:flex; height:calc(100vh - 60px); }
-
 #filtros {
   width:280px;
   background:#020617;
   padding:20px;
   border-right:1px solid #1e293b;
 }
-
 #map { flex:1; }
 
 /* INPUTS */
@@ -62,34 +48,50 @@ input, select, button {
   background:#1e293b;
   color:white;
 }
+button { background:#22c55e; cursor:pointer; }
 
-button {
-  background:#22c55e;
-  font-weight:bold;
-  cursor:pointer;
-}
-
-#logout {
-  background:#ef4444;
-}
-  #admin {
-  background:#020617;
-  padding:15px 20px;
-  border-bottom:1px solid #1e293b;
-  display:flex;
-  gap:10px;
+/* MODAL */
+#modal {
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.7);
+  display:none;
+  justify-content:center;
   align-items:center;
 }
 
-#admin input {
-  max-width:200px;
+.modal-box {
+  background:#1e293b;
+  padding:30px;
+  border-radius:12px;
+  width:400px;
 }
 
-#admin button {
-  max-width:150px;
+/* DROP AREA */
+.drop {
+  border:2px dashed #475569;
+  padding:20px;
+  text-align:center;
+  margin-top:10px;
 }
 
-#contador { margin-top:10px; color:#94a3b8; }
+/* PROGRESS */
+#progress {
+  margin-top:10px;
+  background:#020617;
+  border-radius:8px;
+  overflow:hidden;
+}
+#bar {
+  height:20px;
+  width:0%;
+  background:#22c55e;
+  text-align:center;
+  font-size:12px;
+}
+
+#status { margin-top:10px; }
 </style>
 
 </head>
@@ -103,39 +105,27 @@ button {
     <h2>🔐 Despacho LL</h2>
     <input id="user" placeholder="Usuário">
     <input id="senha" type="password" placeholder="Senha">
-    <button onclick="loginSistema()">Entrar</button>
+    <button onclick="login()">Entrar</button>
   </div>
 </div>
 
 <!-- APP -->
 
-<div id="app">
+<div id="app" style="display:none">
 
-  <!-- HEADER -->
+<div id="header">
+  <div>📍 Despacho LL</div>
+  <button onclick="abrirModal()">📁 Upload</button>
+  <button style="background:#ef4444" onclick="logout()">Sair</button>
+</div>
 
-  <div id="header">
-    <div>📍 Despacho LL</div>
-    <button id="logout" onclick="logout()">Sair</button>
-  </div>
-   <!-- 🔥 ADMIN (UPLOAD VOLTOU AQUI) -->
-  <div id="admin">
-    <input type="file" id="file1">
-    <input type="file" id="file2">
-    <button onclick="processar()">Processar</button>
+<div id="layout">
 
-    <div id="status"></div>
-  </div>
-  <div id="layout">
-
-```
-<!-- FILTROS -->
 <div id="filtros">
-
   <h3>📊 Filtros</h3>
 
-  <input id="buscaOS" placeholder="🔍 Buscar OS..." oninput="carregar()">
+  <input id="buscaOS" placeholder="Buscar OS..." oninput="carregar()">
 
-  <label>Tipo</label>
   <select id="filtroTipo" onchange="carregar()">
     <option value="">Todos</option>
     <option value="PREVENTIVA">Preventiva</option>
@@ -143,7 +133,6 @@ button {
     <option value="INSPECAO">Inspeção</option>
   </select>
 
-  <label>Criticidade</label>
   <select id="filtroCriticidade" onchange="carregar()">
     <option value="">Todos</option>
     <option value="ALTA">Alta</option>
@@ -152,11 +141,39 @@ button {
   </select>
 
   <div id="contador"></div>
-
 </div>
 
-<!-- MAPA -->
 <div id="map"></div>
+
+</div>
+</div>
+
+<!-- MODAL UPLOAD -->
+
+<div id="modal">
+  <div class="modal-box">
+    <h3>Upload de Planilhas</h3>
+
+```
+<div class="drop" onclick="file1.click()">
+  Arquivo 1
+  <input type="file" id="file1" hidden>
+</div>
+
+<div class="drop" onclick="file2.click()">
+  Arquivo 2
+  <input type="file" id="file2" hidden>
+</div>
+
+<button onclick="processar()">Processar</button>
+
+<div id="progress">
+  <div id="bar">0%</div>
+</div>
+
+<div id="status"></div>
+
+<button onclick="fecharModal()">Fechar</button>
 ```
 
   </div>
@@ -167,112 +184,125 @@ button {
 <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
 <script>
-let map, clusterGroup;
+let map, cluster;
 
 /* LOGIN */
-function loginSistema() {
-  const user = document.getElementById("user").value;
-  const senha = document.getElementById("senha").value;
-
-  if (user === "admin" && senha === "123456") {
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").style.display = "block";
-
+function login(){
+  if(user.value==="admin" && senha.value==="123456"){
+    login.style.display="none";
+    app.style.display="block";
     initMap();
     carregar();
-  } else {
-    alert("Login inválido");
-  }
+  } else alert("Login inválido");
 }
 
-function logout() {
-  location.reload();
-}
+function logout(){ location.reload(); }
 
 /* MAPA */
-function initMap() {
-  map = L.map('map').setView([-7.12, -36.5], 8);
-
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png')
-    .addTo(map);
-
-  clusterGroup = L.markerClusterGroup();
-  map.addLayer(clusterGroup);
+function initMap(){
+  map=L.map('map').setView([-7.12,-36.5],8);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+  cluster=L.markerClusterGroup();
+  map.addLayer(cluster);
 }
 
-/* COR */
-function corPorCriticidade(c) {
-  if (!c) return "#94a3b8";
+/* MODAL */
+function abrirModal(){ modal.style.display="flex"; }
+function fecharModal(){ modal.style.display="none"; }
 
-  c = c.toUpperCase();
-
-  if (c.includes("ALTA")) return "#ef4444";
-  if (c.includes("MEDIA")) return "#facc15";
-  if (c.includes("BAIXA")) return "#22c55e";
-
+/* CORES */
+function cor(c){
+  if(!c) return "#94a3b8";
+  c=c.toUpperCase();
+  if(c.includes("ALTA")) return "#ef4444";
+  if(c.includes("MEDIA")) return "#facc15";
+  if(c.includes("BAIXA")) return "#22c55e";
   return "#3b82f6";
 }
 
-/* CARREGAR */
-async function carregar() {
-  const tipo = filtroTipo.value;
-  const crit = filtroCriticidade.value;
-  const busca = buscaOS.value.toUpperCase();
+/* MAPA */
+async function carregar(){
+  const res=await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/api/dados");
+  let dados=await res.json();
 
-  const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/api/dados");
-  let dados = await res.json();
+  cluster.clearLayers();
 
-  clusterGroup.clearLayers();
-
-  dados = dados.filter(p => {
-    const lat = parseFloat(p.lat);
-    const lon = parseFloat(p.lon);
-
-    if (isNaN(lat) || isNaN(lon)) return false;
-    if (lat === 0 || lon === 0) return false;
-
-    if (tipo && !p.tipo?.toUpperCase().includes(tipo)) return false;
-    if (crit && !p.criticidade?.toUpperCase().includes(crit)) return false;
-    if (busca && !p.os?.toUpperCase().includes(busca)) return false;
-
-    return true;
+  dados=dados.filter(p=>{
+    const lat=parseFloat(p.lat);
+    const lon=parseFloat(p.lon);
+    return !isNaN(lat)&&!isNaN(lon)&&lat!==0&&lon!==0;
   });
 
-  document.getElementById("contador").innerText =
-    "Total: " + dados.length;
+  contador.innerText="Total: "+dados.length;
 
-  const bounds = [];
-
-  dados.forEach(p => {
-    const lat = parseFloat(p.lat);
-    const lon = parseFloat(p.lon);
-
-    bounds.push([lat, lon]);
-
-    const marker = L.circleMarker([lat, lon], {
-      radius: 8,
-      fillColor: corPorCriticidade(p.criticidade),
-      color: "#fff",
-      weight: 1,
-      fillOpacity: 0.9
+  dados.forEach(p=>{
+    const marker=L.circleMarker([p.lat,p.lon],{
+      radius:8,
+      fillColor:cor(p.criticidade),
+      color:"#fff",
+      weight:1,
+      fillOpacity:0.9
     });
 
-    marker.bindPopup(`
-      <b>OS:</b> ${p.os}<br>
-      <b>Status:</b> ${p.status}<br>
-      <b>Data:</b> ${p.data_criacao || "-"}<br>
-      <b>Alimentador:</b> ${p.alimentador || "-"}<br>
-      <b>Tipo:</b> ${p.tipo || "-"}<br>
-      <b>Tag:</b> ${p.tag || "-"}<br>
-      <b>Criticidade:</b> ${p.criticidade || "-"}
-    `);
-
-    clusterGroup.addLayer(marker);
+    marker.bindPopup(`<b>OS:</b> ${p.os}`);
+    cluster.addLayer(marker);
   });
+}
 
-  if (bounds.length) {
-    map.fitBounds(bounds);
+/* PROCESSAMENTO */
+async function processar(){
+  const f1=file1.files[0];
+  const f2=file2.files[0];
+
+  if(!f1||!f2){ alert("Envie os dois arquivos"); return; }
+
+  status.innerText="Processando...";
+
+  const wb1=XLSX.read(await f1.arrayBuffer());
+  const d1=XLSX.utils.sheet_to_json(wb1.Sheets[wb1.SheetNames[0]]);
+
+  const wb2=XLSX.read(await f2.arrayBuffer());
+  const d2=XLSX.utils.sheet_to_json(wb2.Sheets[wb2.SheetNames[0]]);
+
+  let dados=[...d1,...d2]
+    .filter(r=>r.Status==="CRIADA"||r.Status==="A REPROGRAMAR")
+    .map(r=>{
+      const lat=parseFloat(String(r["Latitude"]).replace(",",".")); 
+      const lon=parseFloat(String(r["Longitude"]).replace(",",".")); 
+
+      return {
+        os:r["OS Manutencao"],
+        status:r["Status"],
+        lat, lon,
+        criticidade:r["Criticidade"]
+      };
+    })
+    .filter(p=>!isNaN(p.lat)&&!isNaN(p.lon)&&p.lat!==0&&p.lon!==0);
+
+  const chunk=300;
+
+  for(let i=0;i<dados.length;i+=chunk){
+    const parte=dados.slice(i,i+chunk);
+
+    await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/salvar",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "x-reset": i===0?"true":"false"
+      },
+      body:JSON.stringify(parte)
+    });
+
+    let perc=Math.floor((i/dados.length)*100);
+    bar.style.width=perc+"%";
+    bar.innerText=perc+"%";
   }
+
+  bar.style.width="100%";
+  bar.innerText="100%";
+
+  status.innerText="✅ Concluído";
+  carregar();
 }
 </script>
 
