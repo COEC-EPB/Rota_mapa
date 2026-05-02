@@ -34,8 +34,8 @@ body { margin:0; font-family:Arial; background:#0b1220; color:white; }
   background:#020617;
   display:flex;
   align-items:center;
-  justify-content:space-between;
   padding:0 20px;
+  font-weight:bold;
 }
 
 /* LAYOUT */
@@ -49,21 +49,7 @@ body { margin:0; font-family:Arial; background:#0b1220; color:white; }
   width:300px;
   background:#020617;
   padding:20px;
-  transition:0.3s;
   overflow:auto;
-}
-#sidebar.collapsed {
-  width:60px;
-  padding:10px;
-}
-
-/* BOTÃO TOGGLE */
-#toggle {
-  background:#1e293b;
-  border:none;
-  padding:8px;
-  cursor:pointer;
-  width:100%;
 }
 
 /* MAP */
@@ -73,15 +59,23 @@ body { margin:0; font-family:Arial; background:#0b1220; color:white; }
 input, select, button {
   width:100%;
   padding:10px;
-  margin-top:10px;
+  margin-top:8px;
   border-radius:8px;
   border:none;
   background:#1e293b;
   color:white;
+  font-size:14px;
 }
 
-button { background:#22c55e; cursor:pointer; }
+button { background:#22c55e; cursor:pointer; font-weight:bold; }
 .logout { background:#ef4444; margin-top:20px; }
+
+/* LABEL */
+.label {
+  margin-top:12px;
+  font-size:12px;
+  color:#94a3b8;
+}
 
 /* PROGRESS */
 #progress { margin-top:10px; background:#111827; border-radius:8px; }
@@ -126,15 +120,11 @@ button { background:#22c55e; cursor:pointer; }
 
 <div id="app">
 
-<div id="header">
-  <div>📍 Despacho LL</div>
-</div>
+<div id="header">📍 Despacho LL</div>
 
 <div id="layout">
 
 <div id="sidebar">
-
-<button id="toggle" onclick="toggleSidebar()">☰</button>
 
 <h3>📁 Upload</h3>
 <input type="file" id="file">
@@ -147,18 +137,25 @@ button { background:#22c55e; cursor:pointer; }
 
 <h3>📊 Filtros</h3>
 
-<input id="busca" placeholder="Buscar OS..." oninput="carregar()">
+<div class="label">Buscar OS</div>
+<input id="busca" placeholder="Digite a OS..." oninput="carregar()">
 
+<div class="label">Criticidade</div>
 <select id="crit" onchange="carregar()">
-<option value="">Criticidade</option>
-<option value="ALTA">Alta</option>
-<option value="MEDIA">Média</option>
-<option value="BAIXA">Baixa</option>
+  <option value="">Todas</option>
+  <option value="ALTA">Alta</option>
+  <option value="MEDIA">Média</option>
+  <option value="BAIXA">Baixa</option>
 </select>
 
-<select id="tipo" onchange="carregar()">Tipo de Serviço</select>
-<select id="trecho" onchange="carregar()">Trecho</select> 
-<select id="alim" onchange="carregar()">Alimentador</select>
+<div class="label">Tipo de Serviço</div>
+<select id="tipo" onchange="carregar()"></select>
+
+<div class="label">Trecho</div>
+<select id="trecho" onchange="carregar()"></select>
+
+<div class="label">Alimentador</div>
+<select id="alim" onchange="carregar()"></select>
 
 <div id="contador"></div>
 
@@ -179,74 +176,68 @@ button { background:#22c55e; cursor:pointer; }
 
 <script>
 let map, cluster;
+let coresTipo = {};
+let paleta = ["#3b82f6","#22c55e","#facc15","#ef4444","#a855f7","#06b6d4","#f97316"];
 
 /* LOGIN */
 function login(){
-  const user = document.getElementById("user").value;
-  const senha = document.getElementById("senha").value;
-
-  if(user === "admin" && senha === "123456"){
-
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").style.display = "block";
-
+  if(user.value==="admin" && senha.value==="123456"){
+    document.getElementById("login").style.display="none";
+    document.getElementById("app").style.display="block";
     init();
     carregar();
-
-  } else {
-    alert("Login inválido");
-  }
+  } else alert("Login inválido");
 }
 function logout(){ location.reload(); }
 
-/* SIDEBAR */
-function toggleSidebar(){
-  sidebar.classList.toggle("collapsed");
-}
-
-/* MAPA */
+/* MAP */
 function init(){
   map = L.map('map').setView([-7.12,-36.5],8);
 
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
 
-  // 🔥 CLUSTER INTELIGENTE
   cluster = L.markerClusterGroup({
-    maxClusterRadius: zoom => zoom<8?80:zoom<12?50:20,
+    maxClusterRadius: z=>z<8?80:z<12?50:20,
     disableClusteringAtZoom:14,
-    spiderfyOnMaxZoom:true,
-    showCoverageOnHover:false,
-    chunkedLoading:true,
-
-    iconCreateFunction: function(c){
-      const count = c.getChildCount();
-      let size="small";
-      if(count>50) size="large";
-      else if(count>20) size="medium";
-
-      return L.divIcon({
-        html:`<div class="cluster-${size}">${count}</div>`,
-        className:"cluster",
-        iconSize:L.point(40,40)
-      });
-    }
+    chunkedLoading:true
   });
 
   map.addLayer(cluster);
 }
 
-/* CORES */
-function cor(c){
-  if(!c) return "#94a3b8";
-  c=c.toUpperCase();
-  if(c.includes("ALTA")) return "#ef4444";
-  if(c.includes("MEDIA")) return "#facc15";
-  if(c.includes("BAIXA")) return "#22c55e";
-  return "#3b82f6";
+/* COR POR TIPO */
+function corTipo(tipo){
+  if(!tipo) return "#94a3b8";
+  if(!coresTipo[tipo]){
+    coresTipo[tipo] = paleta[Object.keys(coresTipo).length % paleta.length];
+  }
+  return coresTipo[tipo];
+}
+
+/* LEGENDA */
+function legenda(){
+  const l = L.control({position:"bottomright"});
+
+  l.onAdd=function(){
+    const div = L.DomUtil.create("div");
+    div.style.background="#020617";
+    div.style.padding="10px";
+    div.style.borderRadius="8px";
+
+    let html="<b>Tipos</b><br>";
+    Object.entries(coresTipo).forEach(([t,c])=>{
+      html+=`<div><span style="background:${c};width:10px;height:10px;display:inline-block;margin-right:5px"></span>${t}</div>`;
+    });
+
+    div.innerHTML=html;
+    return div;
+  };
+
+  l.addTo(map);
 }
 
 /* UPLOAD */
-async function enviar(){
+function enviar(){
   const file = document.getElementById("file").files[0];
   if(!file) return alert("Selecione arquivo");
 
@@ -268,20 +259,17 @@ async function enviar(){
     };
 
     xhr.onload=()=>{ status.innerText="Upload OK"; carregar(); };
-
     xhr.send(csv);
   };
 
   reader.readAsArrayBuffer(file);
 }
 
-/* FILTROS DINÂMICOS */
+/* FILTROS */
 function preencher(id,set){
   const el=document.getElementById(id);
   el.innerHTML='<option value="">Todos</option>';
-  [...set].sort().forEach(v=>{
-    el.innerHTML+=`<option>${v}</option>`;
-  });
+  [...set].sort().forEach(v=> el.innerHTML+=`<option>${v}</option>`);
 }
 
 /* CARREGAR */
@@ -307,6 +295,7 @@ async function carregar(){
   preencher("trecho",setTrecho);
   preencher("alim",setAlim);
 
+  coresTipo = {};
   cluster.clearLayers();
 
   dados = dados.filter(p=>{
@@ -323,7 +312,7 @@ async function carregar(){
   dados.forEach(p=>{
     const marker = L.circleMarker([p.lat,p.lon],{
       radius:8,
-      fillColor:cor(p.criticidade),
+      fillColor:corTipo(p.tipo),
       color:"#fff",
       fillOpacity:0.9
     });
@@ -333,13 +322,15 @@ async function carregar(){
       <b>Status:</b> ${p.status}<br>
       <b>Tipo:</b> ${p.tipo}<br>
       <b>Trecho:</b> ${p.trecho}<br>
-      <b>Alimentador:</b> ${p.alimentador}
-      <b>Criticidade:</b> ${p.criticidade}
+      <b>Alimentador:</b> ${p.alimentador}<br>
+      <b>Criticidade:</b> ${p.criticidade}<br>
       <b>Tag:</b> ${p.tag}
     `);
 
     cluster.addLayer(marker);
   });
+
+  legenda();
 }
 </script>
 
