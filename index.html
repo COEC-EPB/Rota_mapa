@@ -147,18 +147,22 @@ button { background:#22c55e; cursor:pointer; }
 
 <h3>📊 Filtros</h3>
 
-<input id="busca" placeholder="Buscar OS..." oninput="carregar()">
+<div class="label">Buscar OS</div>
+<input id="busca" placeholder="Digite a OS..." oninput="carregar()">
 
+<div class="label">Criticidade</div>
 <select id="crit" onchange="carregar()">
-<option value="">Criticidade</option>
-<option value="ALTA">Alta</option>
-<option value="MEDIA">Média</option>
-<option value="BAIXA">Baixa</option>
+  <option value="">Todas</option>
+  <option value="ALTA">Alta</option>
+  <option value="MEDIA">Média</option>
+  <option value="BAIXA">Baixa</option>
 </select>
 
-<select id="tipo" onchange="carregar()">Tipo de Serviço</select>
-<select id="trecho" onchange="carregar()">Trecho</select> 
-<select id="alim" onchange="carregar()">Alimentador</select>
+<div class="label">Tipo de Serviço</div>
+<select id="tipo" onchange="carregar()"></select>
+
+<div class="label">Alimentador</div>
+<select id="alim" onchange="carregar()"></select>
 
 <div id="contador"></div>
 
