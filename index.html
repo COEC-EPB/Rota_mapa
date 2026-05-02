@@ -76,6 +76,22 @@ button {
   width:120px;
 }
 
+/* PROGRESS */
+#progress {
+  margin-top:10px;
+  background:#111827;
+  border-radius:8px;
+  overflow:hidden;
+}
+
+#bar {
+  height:20px;
+  width:0%;
+  background:#22c55e;
+  text-align:center;
+  font-size:12px;
+}
+
 /* STATUS */
 #status { margin-top:10px; }
 </style>
@@ -111,6 +127,11 @@ button {
   <h3>📁 Upload</h3>
   <input type="file" id="file">
   <button onclick="enviar()">Enviar</button>
+
+  <div id="progress">
+    <div id="bar">0%</div>
+  </div>
+
   <div id="status"></div>
 
   <hr>
@@ -141,7 +162,7 @@ button {
 <script>
 let map, cluster;
 
-/* ================= LOGIN ================= */
+/* LOGIN */
 function loginSistema(){
   const user = document.getElementById("user").value;
   const senha = document.getElementById("senha").value;
@@ -161,7 +182,7 @@ function logout(){
   location.reload();
 }
 
-/* ================= MAPA ================= */
+/* MAPA */
 function init(){
   map = L.map('map').setView([-7.12,-36.5],8);
 
@@ -172,7 +193,7 @@ function init(){
   map.addLayer(cluster);
 }
 
-/* ================= CORES ================= */
+/* CORES */
 function cor(c){
   if(!c) return "#94a3b8";
   c = c.toUpperCase();
@@ -182,33 +203,62 @@ function cor(c){
   return "#3b82f6";
 }
 
-/* ================= UPLOAD ================= */
-async function enviar(){
-  const f = document.getElementById("file").files[0];
+/* UPLOAD COM PROGRESSO REAL */
+function enviar() {
+  const file = document.getElementById("file").files[0];
   const status = document.getElementById("status");
+  const bar = document.getElementById("bar");
 
-  if(!f){
+  if (!file) {
     alert("Selecione o arquivo CSV");
     return;
   }
 
   status.innerText = "⏳ Enviando...";
+  bar.style.width = "0%";
+  bar.innerText = "0%";
 
-  const text = await f.text();
+  const reader = new FileReader();
 
-  const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/upload", {
-    method: "POST",
-    body: text
-  });
+  reader.onload = function () {
+    const xhr = new XMLHttpRequest();
 
-  const r = await res.json();
+    xhr.open("POST", "https://despacholinhaviva.pedro-fillype.workers.dev/upload");
 
-  status.innerText = "✅ " + r.total + " registros";
+    xhr.upload.onprogress = function (e) {
+      if (e.lengthComputable) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        bar.style.width = percent + "%";
+        bar.innerText = percent + "%";
+      }
+    };
 
-  carregar();
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        const res = JSON.parse(xhr.responseText);
+
+        bar.style.width = "100%";
+        bar.innerText = "100%";
+
+        status.innerText = "✅ " + res.total + " registros";
+
+        carregar();
+      } else {
+        status.innerText = "❌ Erro no upload";
+      }
+    };
+
+    xhr.onerror = function () {
+      status.innerText = "❌ Falha na conexão";
+    };
+
+    xhr.send(reader.result);
+  };
+
+  reader.readAsText(file);
 }
 
-/* ================= MAPA ================= */
+/* MAPA */
 async function carregar(){
   const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/api/dados");
   let dados = await res.json();
