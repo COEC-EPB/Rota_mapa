@@ -69,9 +69,18 @@ def upload():
 
         # 🔥 ENVIO EM LOTES
         for i, chunk in enumerate(dividir(dados, 500)):
+            headers = {}
+
+            if i == 0:
+                headers["x-reset"] = "true"
+
             print(f"Enviando lote {i+1} com {len(chunk)} registros...")
 
-            response = requests.post(url_worker, json=chunk)
+            response = requests.post(
+                url_worker,
+                json=chunk,
+                headers=headers
+            )
 
             if response.status_code != 200:
                 print("Erro no Worker:", response.text)
