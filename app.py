@@ -60,36 +60,25 @@ def processar_arquivos(file1, file2):
 # 🚀 UPLOAD
 @app.route("/upload", methods=["POST"])
 def upload():
+    print("Recebendo arquivos...")
+
     file1 = request.files.get("file1")
     file2 = request.files.get("file2")
 
-    if not file1 or not file2:
-        return jsonify({"erro": "Envie os dois arquivos"}), 400
+    print("Arquivos recebidos")
 
     dados = processar_arquivos(file1, file2)
 
-    try:
-        response = requests.post(
-            "https://despacholinhaviva.pedro-fillype.workers.dev/salvar",
-            json=dados
-        )
+    print("Processado:", len(dados))
 
-        if response.status_code != 200:
-            return jsonify({
-                "erro": "Erro ao enviar para o Worker",
-                "detalhe": response.text
-            }), 500
+    response = requests.post(
+        "https://despacholinhaviva.pedro-fillype.workers.dev/salvar",
+        json=dados
+    )
 
-    except Exception as e:
-        return jsonify({
-            "erro": "Falha na comunicação com Worker",
-            "detalhe": str(e)
-        }), 500
+    print("Enviado pro worker:", response.status_code)
 
-    return jsonify({
-        "ok": True,
-        "total": len(dados)
-    })
+    return jsonify({"ok": True})
 
 
 # 🚀 HEALTH CHECK (IMPORTANTE PRA RAILWAY)
