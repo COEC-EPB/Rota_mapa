@@ -133,12 +133,34 @@ async function carregar() {
   dados.forEach(p => {
     if (!p.lat || !p.lon) return;
 
-    L.circleMarker([p.lat, p.lon], { radius: 8, color:"#22c55e" })
-      .bindPopup(`OS: ${p.os}<br>Status: ${p.status}`)
+    L.circleMarker([p.lat, p.lon], {
+      radius: 8,
+      fillColor: corPorTipo(p.tipo),
+      color: "#fff",
+      weight: 1,
+      fillOpacity: 0.9
+    })
+        <b>OS:</b> ${p.os}<br>
+        <b>Status:</b> ${p.status}<br>
+        <b>Data:</b> ${p.data_criacao || "-"}<br>
+        <b>Alimentador:</b> ${p.alimentador || "-"}<br>
+        <b>Tipo:</b> ${p.tipo || "-"}<br>
+        <b>Tag:</b> ${p.tag || "-"}
+        <b>Criticidade:</b> ${p.Criticidade || "-"}        
       .addTo(layer);
   });
 }
+function corPorTipo(tipo) {
+  if (!tipo) return "#94a3b8";
 
+  tipo = tipo.toUpperCase();
+
+  if (tipo.includes("PREVENTIVA")) return "#22c55e"; // verde
+  if (tipo.includes("CORRETIVA")) return "#ef4444"; // vermelho
+  if (tipo.includes("INSPECAO")) return "#3b82f6"; // azul
+
+  return "#facc15"; // amarelo padrão
+}
 /* PROCESSAR EXCEL */
 async function processar() {
   const f1 = file1.files[0];
