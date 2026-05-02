@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -9,6 +10,24 @@
 
 <style>
 body { margin:0; font-family:Arial; background:#0b1220; color:white; }
+
+/* LOGIN */
+#login {
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.card {
+  background:#1e293b;
+  padding:30px;
+  border-radius:12px;
+  width:300px;
+}
+
+/* APP */
+#app { display:none; }
 
 /* HEADER */
 #header {
@@ -52,15 +71,37 @@ button {
   cursor:pointer;
 }
 
+.logout {
+  background:#ef4444;
+  width:120px;
+}
+
 /* STATUS */
 #status { margin-top:10px; }
 </style>
+
 </head>
 
 <body>
 
+<!-- LOGIN -->
+
+<div id="login">
+  <div class="card">
+    <h3>🔐 Login</h3>
+    <input id="user" placeholder="Usuário">
+    <input id="senha" type="password" placeholder="Senha">
+    <button onclick="loginSistema()">Entrar</button>
+  </div>
+</div>
+
+<!-- APP -->
+
+<div id="app">
+
 <div id="header">
   <div>📍 Despacho LL</div>
+  <button class="logout" onclick="logout()">Sair</button>
 </div>
 
 <div id="layout">
@@ -91,13 +132,36 @@ button {
 <div id="map"></div>
 
 </div>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
 <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
 <script>
 let map, cluster;
 
+/* ================= LOGIN ================= */
+function loginSistema(){
+  const user = document.getElementById("user").value;
+  const senha = document.getElementById("senha").value;
+
+  if(user === "admin" && senha === "123456"){
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
+
+    init();
+    carregar();
+  } else {
+    alert("Login inválido");
+  }
+}
+
+function logout(){
+  location.reload();
+}
+
+/* ================= MAPA ================= */
 function init(){
   map = L.map('map').setView([-7.12,-36.5],8);
 
@@ -108,34 +172,43 @@ function init(){
   map.addLayer(cluster);
 }
 
+/* ================= CORES ================= */
 function cor(c){
   if(!c) return "#94a3b8";
+  c = c.toUpperCase();
   if(c.includes("ALTA")) return "#ef4444";
   if(c.includes("MEDIA")) return "#facc15";
   if(c.includes("BAIXA")) return "#22c55e";
   return "#3b82f6";
 }
 
+/* ================= UPLOAD ================= */
 async function enviar(){
-  const f = file.files[0];
-  if(!f) return alert("Selecione arquivo");
+  const f = document.getElementById("file").files[0];
+  const status = document.getElementById("status");
 
-  status.innerText = "Enviando...";
+  if(!f){
+    alert("Selecione o arquivo CSV");
+    return;
+  }
+
+  status.innerText = "⏳ Enviando...";
 
   const text = await f.text();
 
-  const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/upload",{
-    method:"POST",
+  const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/upload", {
+    method: "POST",
     body: text
   });
 
   const r = await res.json();
 
-  status.innerText = "✔ " + r.total + " registros";
+  status.innerText = "✅ " + r.total + " registros";
 
   carregar();
 }
 
+/* ================= MAPA ================= */
 async function carregar(){
   const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/api/dados");
   let dados = await res.json();
@@ -147,11 +220,12 @@ async function carregar(){
 
   dados = dados.filter(p=>{
     if(busca && !p.os?.toUpperCase().includes(busca)) return false;
-    if(crit && !p.criticidade?.includes(crit)) return false;
+    if(crit && !p.criticidade?.toUpperCase().includes(crit)) return false;
     return true;
   });
 
-  contador.innerText = "Total: " + dados.length;
+  document.getElementById("contador").innerText =
+    "Total: " + dados.length;
 
   dados.forEach(p=>{
     const marker = L.circleMarker([p.lat,p.lon],{
@@ -171,9 +245,6 @@ async function carregar(){
     cluster.addLayer(marker);
   });
 }
-
-init();
-carregar();
 </script>
 
 </body>
