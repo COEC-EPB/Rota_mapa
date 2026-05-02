@@ -3,13 +3,30 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Despacho LL</title>
+<title>Despacho LL PRO</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
 
 <style>
 body { margin:0; font-family:Arial; background:#0b1220; color:white; }
+
+/* LOGIN */
+#login {
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.card {
+  background:#1e293b;
+  padding:30px;
+  border-radius:12px;
+  width:300px;
+}
+
+/* APP */
+#app { display:none; }
 
 /* HEADER */
 #header {
@@ -35,7 +52,6 @@ body { margin:0; font-family:Arial; background:#0b1220; color:white; }
   transition:0.3s;
   overflow:auto;
 }
-
 #sidebar.collapsed {
   width:60px;
   padding:10px;
@@ -48,7 +64,6 @@ body { margin:0; font-family:Arial; background:#0b1220; color:white; }
   padding:8px;
   cursor:pointer;
   width:100%;
-  margin-bottom:10px;
 }
 
 /* MAP */
@@ -65,23 +80,11 @@ input, select, button {
   color:white;
 }
 
-button {
-  background:#22c55e;
-  cursor:pointer;
-}
-
-.logout {
-  background:#ef4444;
-  margin-top:20px;
-}
+button { background:#22c55e; cursor:pointer; }
+.logout { background:#ef4444; margin-top:20px; }
 
 /* PROGRESS */
-#progress {
-  margin-top:10px;
-  background:#111827;
-  border-radius:8px;
-}
-
+#progress { margin-top:10px; background:#111827; border-radius:8px; }
 #bar {
   height:20px;
   width:0%;
@@ -90,15 +93,38 @@ button {
   font-size:12px;
 }
 
-/* STATUS */
-#status { margin-top:10px; }
+/* CLUSTER */
+.cluster div {
+  border-radius:50%;
+  color:white;
+  font-weight:bold;
+  text-align:center;
+  line-height:40px;
+}
+.cluster-small { background:#22c55e; }
+.cluster-medium { background:#facc15; }
+.cluster-large { background:#ef4444; }
 
-.label { margin-top:10px; font-size:12px; color:#94a3b8; }
 </style>
 
 </head>
 
 <body>
+
+<!-- LOGIN -->
+
+<div id="login">
+  <div class="card">
+    <h3>🔐 Login</h3>
+    <input id="user" placeholder="Usuário">
+    <input id="senha" type="password" placeholder="Senha">
+    <button onclick="login()">Entrar</button>
+  </div>
+</div>
+
+<!-- APP -->
+
+<div id="app">
 
 <div id="header">
   <div>📍 Despacho LL</div>
@@ -123,22 +149,14 @@ button {
 
 <input id="busca" placeholder="Buscar OS..." oninput="carregar()">
 
-<div class="label">Criticidade</div>
 <select id="crit" onchange="carregar()">
-  <option value="">Todos</option>
-  <option value="ALTA">Alta</option>
-  <option value="MEDIA">Média</option>
-  <option value="BAIXA">Baixa</option>
+<option value="">Criticidade</option>
+<option value="ALTA">Alta</option>
+<option value="MEDIA">Média</option>
+<option value="BAIXA">Baixa</option>
 </select>
 
-<div class="label">Tipo Serviço</div>
-<select id="tipo" onchange="carregar()"></select>
-
-<div class="label">Trecho</div>
-<select id="trecho" onchange="carregar()"></select>
-
-<div class="label">Alimentador</div>
-<select id="alim" onchange="carregar()"></select>
+<select id="tipo" onchange="carregar()"></select> <select id="trecho" onchange="carregar()"></select> <select id="alim" onchange="carregar()"></select>
 
 <div id="contador"></div>
 
@@ -149,6 +167,7 @@ button {
 <div id="map"></div>
 
 </div>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 
@@ -158,28 +177,58 @@ button {
 
 <script>
 let map, cluster;
-let dadosGlobais = [];
+
+/* LOGIN */
+function login(){
+  if(user.value==="admin" && senha.value==="123456"){
+    loginDiv.style.display="none";
+    app.style.display="block";
+    init();
+    carregar();
+  } else alert("Login inválido");
+}
+function logout(){ location.reload(); }
 
 /* SIDEBAR */
 function toggleSidebar(){
-  document.getElementById("sidebar").classList.toggle("collapsed");
+  sidebar.classList.toggle("collapsed");
 }
 
 /* MAPA */
 function init(){
   map = L.map('map').setView([-7.12,-36.5],8);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png')
-    .addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
 
-  cluster = L.markerClusterGroup();
+  // 🔥 CLUSTER INTELIGENTE
+  cluster = L.markerClusterGroup({
+    maxClusterRadius: zoom => zoom<8?80:zoom<12?50:20,
+    disableClusteringAtZoom:14,
+    spiderfyOnMaxZoom:true,
+    showCoverageOnHover:false,
+    chunkedLoading:true,
+
+    iconCreateFunction: function(c){
+      const count = c.getChildCount();
+      let size="small";
+      if(count>50) size="large";
+      else if(count>20) size="medium";
+
+      return L.divIcon({
+        html:`<div class="cluster-${size}">${count}</div>`,
+        className:"cluster",
+        iconSize:L.point(40,40)
+      });
+    }
+  });
+
   map.addLayer(cluster);
 }
 
 /* CORES */
 function cor(c){
   if(!c) return "#94a3b8";
-  c = c.toUpperCase();
+  c=c.toUpperCase();
   if(c.includes("ALTA")) return "#ef4444";
   if(c.includes("MEDIA")) return "#facc15";
   if(c.includes("BAIXA")) return "#22c55e";
@@ -188,35 +237,27 @@ function cor(c){
 
 /* UPLOAD */
 async function enviar(){
-  const file = fileInput.files[0];
-  const bar = document.getElementById("bar");
-  const status = document.getElementById("status");
-
+  const file = document.getElementById("file").files[0];
   if(!file) return alert("Selecione arquivo");
 
   const reader = new FileReader();
 
-  reader.onload = async (e)=>{
-    const data = new Uint8Array(e.target.result);
-    const wb = XLSX.read(data,{type:"array"});
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const csv = XLSX.utils.sheet_to_csv(sheet);
+  reader.onload = e=>{
+    const wb = XLSX.read(new Uint8Array(e.target.result),{type:"array"});
+    const csv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
 
     const xhr = new XMLHttpRequest();
     xhr.open("POST","https://despacholinhaviva.pedro-fillype.workers.dev/upload");
 
-    xhr.upload.onprogress = (e)=>{
+    xhr.upload.onprogress = e=>{
       if(e.lengthComputable){
         const p = Math.round((e.loaded/e.total)*100);
-        bar.style.width = p+"%";
-        bar.innerText = p+"%";
+        bar.style.width=p+"%";
+        bar.innerText=p+"%";
       }
     };
 
-    xhr.onload = ()=>{
-      status.innerText = "✅ Upload concluído";
-      carregar();
-    };
+    xhr.onload=()=>{ status.innerText="Upload OK"; carregar(); };
 
     xhr.send(csv);
   };
@@ -225,27 +266,11 @@ async function enviar(){
 }
 
 /* FILTROS DINÂMICOS */
-function popularFiltros(dados){
-  const setTipo = new Set();
-  const setTrecho = new Set();
-  const setAlim = new Set();
-
-  dados.forEach(p=>{
-    if(p.tipo) setTipo.add(p.tipo);
-    if(p.trecho) setTrecho.add(p.trecho);
-    if(p.alimentador) setAlim.add(p.alimentador);
-  });
-
-  preencherSelect("tipo", setTipo);
-  preencherSelect("trecho", setTrecho);
-  preencherSelect("alim", setAlim);
-}
-
-function preencherSelect(id, set){
-  const sel = document.getElementById(id);
-  sel.innerHTML = '<option value="">Todos</option>';
+function preencher(id,set){
+  const el=document.getElementById(id);
+  el.innerHTML='<option value="">Todos</option>';
   [...set].sort().forEach(v=>{
-    sel.innerHTML += `<option value="${v}">${v}</option>`;
+    el.innerHTML+=`<option>${v}</option>`;
   });
 }
 
@@ -254,28 +279,36 @@ async function carregar(){
   const res = await fetch("https://despacholinhaviva.pedro-fillype.workers.dev/api/dados");
   let dados = await res.json();
 
-  dadosGlobais = dados;
+  const busca = document.getElementById("busca").value.toUpperCase();
+  const crit = document.getElementById("crit").value;
+  const tipo = document.getElementById("tipo").value;
+  const trecho = document.getElementById("trecho").value;
+  const alim = document.getElementById("alim").value;
 
-  popularFiltros(dados);
+  const setTipo=new Set(), setTrecho=new Set(), setAlim=new Set();
 
-  const busca = buscaOS.value.toUpperCase();
-  const crit = critSelect.value;
-  const tipo = tipoSelect.value;
-  const trecho = trechoSelect.value;
-  const alim = alimSelect.value;
+  dados.forEach(p=>{
+    if(p.tipo) setTipo.add(p.tipo);
+    if(p.trecho) setTrecho.add(p.trecho);
+    if(p.alimentador) setAlim.add(p.alimentador);
+  });
+
+  preencher("tipo",setTipo);
+  preencher("trecho",setTrecho);
+  preencher("alim",setAlim);
 
   cluster.clearLayers();
 
   dados = dados.filter(p=>{
     if(busca && !p.os?.toUpperCase().includes(busca)) return false;
     if(crit && !p.criticidade?.includes(crit)) return false;
-    if(tipo && p.tipo !== tipo) return false;
-    if(trecho && p.trecho !== trecho) return false;
-    if(alim && p.alimentador !== alim) return false;
+    if(tipo && p.tipo!==tipo) return false;
+    if(trecho && p.trecho!==trecho) return false;
+    if(alim && p.alimentador!==alim) return false;
     return true;
   });
 
-  contador.innerText = "Total: " + dados.length;
+  contador.innerText="Total: "+dados.length;
 
   dados.forEach(p=>{
     const marker = L.circleMarker([p.lat,p.lon],{
@@ -296,15 +329,6 @@ async function carregar(){
     cluster.addLayer(marker);
   });
 }
-
-/* LOGOUT */
-function logout(){
-  location.reload();
-}
-
-/* INIT */
-init();
-carregar();
 </script>
 
 </body>
