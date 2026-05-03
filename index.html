@@ -434,12 +434,27 @@ async function carregar(){
   if(isNaN(lat) || isNaN(lon)) return;
 
   const marker = L.marker([lat,lon], {
-    icon: L.divIcon({...}),
-    dados: p
-  });
+  icon: L.divIcon({
+    html:`<div style="
+      width:14px;
+      height:14px;
+      background:${corTipo(p.tipo)};
+      border-radius:50%;
+      border:3px solid white;
+    "></div>`
+  }),
+  dados: p
+});
 
-  marker.bindPopup(...);
-
+marker.bindPopup(`
+  <b>OS:</b> ${p.os}<br>
+  <b>Status:</b> ${p.status}<br>
+  <b>Tipo:</b> ${p.tipo}<br>
+  <b>Trecho:</b> ${p.trecho}<br>
+  <b>Alimentador:</b> ${p.alimentador}<br>
+  <b>Criticidade:</b> ${p.criticidade}<br>
+  <b>Tag:</b> ${p.tag}
+`);
   // ✅ AQUI É O LUGAR CERTO
   marker.on('click', function () {
 
