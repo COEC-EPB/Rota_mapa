@@ -218,17 +218,17 @@ function toggleLegenda(){
 function init(){
   map = L.map('map').setView([-7.12,-36.5],7);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
-  cluster.options.spiderfyDistanceMultiplier = 2;
-  cluster = L.markerClusterGroup({
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png')
+    .addTo(map);
 
-      maxClusterRadius: 100,
-      disableClusteringAtZoom: 16,
-      spiderfyOnMaxZoom: true,
-      showCoverageOnHover: false,
-      zoomToBoundsOnClick: true,
-      chunkedLoading: true
-  
+  cluster = L.markerClusterGroup({
+    maxClusterRadius: 100,
+    disableClusteringAtZoom: 16,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+    chunkedLoading: true,
+
     iconCreateFunction: function (cluster) {
       const count = cluster.getChildCount();
 
@@ -254,6 +254,12 @@ function init(){
       });
     }
   });
+
+  // 👉 AGORA SIM (depois de criar)
+  cluster.options.spiderfyDistanceMultiplier = 2;
+
+  map.addLayer(cluster);
+}
 
   map.addLayer(cluster);
 }
