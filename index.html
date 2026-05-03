@@ -298,10 +298,6 @@ function init(){
     }
   });
 
-  // 👉 AGORA SIM (depois de criar)
-  cluster.options.spiderfyDistanceMultiplier = 2;
-  
-
   map.addLayer(cluster);
   cluster.on('spiderfied', function (e) {
   console.log("Expandido:", e.cluster.getAllChildMarkers().length);
