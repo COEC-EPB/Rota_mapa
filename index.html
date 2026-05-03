@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <title>Despacho LL PRO</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+  
 
 <style>
 body { margin:0; font-family:Arial; background:#0b1220; color:white; }
@@ -353,7 +353,8 @@ function init(){
 }
 
 /* 🔥 NOVO: GERAR SGM */
-  function gerarSGM(lista){
+/* 🔥 NOVO: GERAR SGM */
+function gerarSGM(lista){
 
   if(!lista.length){
     alert("Nenhum ponto selecionado");
@@ -372,6 +373,8 @@ function init(){
   // copia automaticamente
   navigator.clipboard.writeText(texto);
 
+  alert("SGMs copiados!");
+}
   
 /* COR */
 function corTipo(tipo){
