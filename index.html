@@ -225,51 +225,16 @@ function init(){
     maxClusterRadius: 100,
     disableClusteringAtZoom: 16,
     spiderfyOnMaxZoom: true,
-    spiderLegPolylineOptions: {
-    weight: 1.5,
-    color: "#94a3b8",
-    opacity: 0.7
-  },
-    // 🔥 ISSO MUDA O FORMATO
-  spiderfyDistanceMultiplier: 3, // mais aberto
-    showCoverageOnHover: false,
-    zoomToBoundsOnClick: true,
-    chunkedLoading: true,
-
-    iconCreateFunction: function (cluster) {
-      const count = cluster.getChildCount();
-
-      let size = 40;
-      if (count > 50) size = 50;
-      if (count > 100) size = 60;
-
-      return L.divIcon({
-        html: `<div style="
-          background:#1e293b;
-          color:white;
-          border-radius:50%;
-          width:${size}px;
-          height:${size}px;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-weight:bold;
-          border:2px solid #22c55e;
-        ">${count}</div>`,
-        className: "",
-        iconSize: [size, size]
-      });
-    }
+    chunkedLoading: true
   });
-
-  // 👉 AGORA SIM (depois de criar)
-  cluster.options.spiderfyDistanceMultiplier = 2;
-  
 
   map.addLayer(cluster);
+
+  // ✅ AQUI É O LUGAR CERTO
   cluster.on('spiderfied', function (e) {
-  console.log("Expandido:", e.cluster.getAllChildMarkers().length);
+    console.log("Expandido:", e.cluster.getAllChildMarkers().length);
   });
+
   // opcional: clicar já abre
   cluster.on('clusterclick', function (a) {
     a.layer.spiderfy();
