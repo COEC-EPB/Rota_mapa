@@ -219,7 +219,7 @@ function init(){
   map = L.map('map').setView([-7.12,-36.5],7);
 
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
-
+  cluster.options.spiderfyDistanceMultiplier = 2;
   cluster = L.markerClusterGroup({
 
       maxClusterRadius: 100,
@@ -228,7 +228,7 @@ function init(){
       showCoverageOnHover: false,
       zoomToBoundsOnClick: true,
       chunkedLoading: true
-
+  
     iconCreateFunction: function (cluster) {
       const count = cluster.getChildCount();
 
@@ -378,8 +378,9 @@ async function carregar(){
     if(isNaN(lat) || isNaN(lon)) return;
 
     bounds.push([lat,lon]);
+    const jitter = () => (Math.random() - 0.5) * 0.00005;
 
-    const marker = L.marker([lat,lon],{
+    const marker = L.marker([lat + jitter(),lon + jitter()],{
       icon: L.divIcon({
         html:`<div style="
           width:14px;
