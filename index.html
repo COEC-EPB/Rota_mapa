@@ -494,6 +494,7 @@ async function carregar(){
   const tipo = document.getElementById("tipo").value;
   const trecho = document.getElementById("trecho").value;
   const alim = document.getElementById("alim").value;
+  const sgm = document.getElementById("sgm").value;
 
   const setTipo=new Set(), setTrecho=new Set(), setAlim=new Set();
 
@@ -518,6 +519,7 @@ async function carregar(){
     if(tipo && p.tipo!==tipo) return false;
     if(trecho && p.trecho!==trecho) return false;
     if(alim && p.alimentador!==alim) return false;
+    if(sgm && p.sgm!==alim) return false;
     return true;
   });
 
@@ -547,10 +549,10 @@ marker.bindPopup(`
   <b>OS:</b> ${p.os}<br>
   <b>Status:</b> ${p.status}<br>
   <b>Tipo:</b> ${p.tipo}<br>
-  <b>Trecho:</b> ${p.trecho}<br>
   <b>Alimentador:</b> ${p.alimentador}<br>
   <b>Criticidade:</b> ${p.criticidade}<br>
   <b>Tag:</b> ${p.tag}
+  <b>OS SGM:</b> ${p.sgm}<br>
 `);
   // ✅ AQUI É O LUGAR CERTO
   marker.on('click', function () {
