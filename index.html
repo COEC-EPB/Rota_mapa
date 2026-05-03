@@ -315,25 +315,6 @@ function init(){
   mostrarListaOS(markers);
 
 });
-  marker.on('click', function () {
-
-  const clickedLat = this.getLatLng().lat;
-  const clickedLon = this.getLatLng().lng;
-
-  const iguais = [];
-
-  cluster.eachLayer(m => {
-    const lat = m.getLatLng().lat;
-    const lon = m.getLatLng().lng;
-
-    if(Math.abs(lat - clickedLat) < 0.00001 &&
-       Math.abs(lon - clickedLon) < 0.00001){
-      iguais.push(m);
-    }
-  });
-
-  mostrarListaOS(iguais);
-});
 }
 /* COR */
 function corTipo(tipo){
@@ -447,39 +428,43 @@ async function carregar(){
 
   contador.innerText="Total: "+dados.length;
 
-  dados.forEach(p=>{
+  dados.forEach(p => {
 
-    const lat = parseFloat(p.lat);
-    const lon = parseFloat(p.lon);
+  const lat = parseFloat(p.lat);
+  const lon = parseFloat(p.lon);
 
-    if(isNaN(lat) || isNaN(lon)) return;
+  if(isNaN(lat) || isNaN(lon)) return;
 
-    bounds.push([lat,lon]);
+  const marker = L.marker([lat,lon], {
+    icon: L.divIcon({...}),
+    dados: p
+  });
 
-    const marker = L.marker([lat,lon],{
-      icon: L.divIcon({
-        html:`<div style="
-          width:14px;
-          height:14px;
-          background:${corTipo(p.tipo)};
-          border-radius:50%;
-          border:3px solid white;
-        "></div>`
-      }),dados: p // 🔥 IMPORTANTE
+  marker.bindPopup(...);
+
+  // ✅ AQUI É O LUGAR CERTO
+  marker.on('click', function () {
+
+    const clickedLat = this.getLatLng().lat;
+    const clickedLon = this.getLatLng().lng;
+
+    const iguais = [];
+
+    cluster.eachLayer(m => {
+      const lat = m.getLatLng().lat;
+      const lon = m.getLatLng().lng;
+
+      if(Math.abs(lat - clickedLat) < 0.00001 &&
+         Math.abs(lon - clickedLon) < 0.00001){
+        iguais.push(m);
+      }
     });
 
-    marker.bindPopup(`
-      <b>OS:</b> ${p.os}<br>
-      <b>Status:</b> ${p.status}<br>
-      <b>Tipo:</b> ${p.tipo}<br>
-      <b>Trecho:</b> ${p.trecho}<br>
-      <b>Alimentador:</b> ${p.alimentador}<br>
-      <b>Criticidade:</b> ${p.criticidade}<br>
-      <b>Tag:</b> ${p.tag}
-    `);
-
-    cluster.addLayer(marker);
+    mostrarListaOS(iguais);
   });
+
+  cluster.addLayer(marker);
+});
 
   if(bounds.length){
     map.fitBounds(bounds);
