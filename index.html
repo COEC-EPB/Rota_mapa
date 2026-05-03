@@ -269,11 +269,11 @@ function init(){
   map.addLayer(cluster);
   cluster.on('spiderfied', function (e) {
   console.log("Expandido:", e.cluster.getAllChildMarkers().length);
-    // opcional: clicar já abre
+  });
+  // opcional: clicar já abre
   cluster.on('clusterclick', function (a) {
     a.layer.spiderfy();
   });
-});
 }
 
 /* COR */
