@@ -225,6 +225,13 @@ function init(){
     maxClusterRadius: 100,
     disableClusteringAtZoom: 16,
     spiderfyOnMaxZoom: true,
+    spiderLegPolylineOptions: {
+    weight: 1.5,
+    color: "#94a3b8",
+    opacity: 0.7
+  },
+    // 🔥 ISSO MUDA O FORMATO
+  spiderfyDistanceMultiplier: 3, // mais aberto
     showCoverageOnHover: false,
     zoomToBoundsOnClick: true,
     chunkedLoading: true,
@@ -257,8 +264,16 @@ function init(){
 
   // 👉 AGORA SIM (depois de criar)
   cluster.options.spiderfyDistanceMultiplier = 2;
+  
 
   map.addLayer(cluster);
+  cluster.on('spiderfied', function (e) {
+  console.log("Expandido:", e.cluster.getAllChildMarkers().length);
+    // opcional: clicar já abre
+  cluster.on('clusterclick', function (a) {
+    a.layer.spiderfy();
+  });
+});
 }
 
 /* COR */
