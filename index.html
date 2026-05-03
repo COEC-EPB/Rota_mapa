@@ -306,10 +306,6 @@ function init(){
   cluster.on('spiderfied', function (e) {
   console.log("Expandido:", e.cluster.getAllChildMarkers().length);
   });
-  // opcional: clicar já abre
-  cluster.on('clusterclick', function (a) {
-    a.layer.spiderfy();
-  });
   cluster.on('clusterclick', function (a) {
 
   const markers = a.layer.getAllChildMarkers();
