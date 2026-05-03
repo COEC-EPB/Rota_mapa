@@ -7,6 +7,8 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
+<script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
 
 <style>
 body { margin:0; font-family:Arial; background:#0b1220; color:white; }
@@ -183,6 +185,7 @@ button { background:#22c55e; cursor:pointer; }
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <script>
+let drawnItems; // 🔥 NOVO
 let map, cluster;
 let coresTipo = {};
 let legendaControl = null;
@@ -298,6 +301,44 @@ function init(){
     }
   });
 
+  // 🔥 ===== NOVO: DESENHO =====
+  drawnItems = new L.FeatureGroup();
+  map.addLayer(drawnItems);
+
+  const drawControl = new L.Control.Draw({
+    draw: {
+      polygon: true,
+      rectangle: true,
+      circle: false,
+      marker: false,
+      polyline: false
+    },
+    edit: {
+      featureGroup: drawnItems
+    }
+  });
+
+  map.addControl(drawControl);
+
+  // 🔥 CAPTURA DA ÁREA
+  map.on(L.Draw.Event.CREATED, function (e) {
+
+    drawnItems.clearLayers();
+    drawnItems.addLayer(e.layer);
+
+    const selecionados = [];
+
+    cluster.eachLayer(m => {
+      const latlng = m.getLatLng();
+
+      if (e.layer.getBounds().contains(latlng)) {
+        selecionados.push(m.options.dados);
+      }
+    });
+
+    gerarSGM(selecionados);
+  });
+
   map.addLayer(cluster);
   cluster.on('spiderfied', function (e) {
   console.log("Expandido:", e.cluster.getAllChildMarkers().length);
@@ -310,6 +351,28 @@ function init(){
 
 });
 }
+
+/* 🔥 NOVO: GERAR SGM */
+  function gerarSGM(lista){
+
+  if(!lista.length){
+    alert("Nenhum ponto selecionado");
+    return;
+  }
+
+  const sgms = lista
+    .map(p => p.sgm)
+    .filter(Boolean);
+
+  const texto = sgms.join(", ");
+
+  // mostra no painel
+  document.getElementById("listaOS").innerText = texto;
+
+  // copia automaticamente
+  navigator.clipboard.writeText(texto);
+
+  
 /* COR */
 function corTipo(tipo){
   if(!tipo) return "#94a3b8";
