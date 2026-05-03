@@ -6,10 +6,19 @@
 <title>Despacho LL PRO</title>
 
 
+<!-- CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
-  
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" crossorigin="" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+
+<!-- JS (ORDEM IMPORTA MUITO) -->
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 body { margin:0; font-family:Arial; background:#0b1220; color:white; }
@@ -179,13 +188,7 @@ button { background:#22c55e; cursor:pointer; }
 </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 
-<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
-
-<script src="https://unpkg.com/leaflet.draw@1.0.4/dist/leaflet.draw.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <script>
 let drawnItems; // 🔥 NOVO
